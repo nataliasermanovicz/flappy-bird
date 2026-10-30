@@ -9,7 +9,7 @@ import birdMidSrc from '../assets/sprites/bird-midflap.png';
 import birdUpSrc from '../assets/sprites/bird-upflap.png';
 import birdDownSrc from '../assets/sprites/bird-downflap.png';
 import getReadyImgSrc from '../assets/sprites/get-ready.png';
-import instructionsImgSrc from '../assets/sprites/instrucoes.png'; // ou message.png
+import instructionsImgSrc from '../assets/sprites/instrucoes.png';
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -68,19 +68,16 @@ export default function Game() {
       },
 
       update: function () {
-        // Animação de bater asas
         if (frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
 
         if (gameState.current === gameState.getReady) {
-          // Flutuação suave na tela de Get Ready
           this.y = 180 + Math.sin(frame / 10) * 5;
         } else if (gameState.current === gameState.play) {
           this.speed += this.gravity;
           this.y += this.speed;
 
-          // Colisão com o chão
           if (this.y + this.h / 2 >= cvs.height - 112) {
             this.y = cvs.height - 112 - this.h / 2;
             gameState.current = gameState.gameOver;
@@ -131,10 +128,8 @@ export default function Game() {
           let topPipeY = p.y;
           let bottomPipeY = p.y + this.h + this.gap;
 
-          // Cano inferior
           ctx.drawImage(pipeImg, p.x, bottomPipeY, this.w, this.h);
 
-          // Cano superior invertido
           ctx.save();
           ctx.translate(p.x + this.w / 2, topPipeY + this.h / 2);
           ctx.scale(1, -1);
@@ -156,7 +151,6 @@ export default function Game() {
           let p = this.pipeGenerator[i];
           p.x -= this.dx;
 
-          // Colisão com os canos
           if (
             bird.x + bird.radius > p.x &&
             bird.x - bird.radius < p.x + this.w &&
@@ -165,13 +159,11 @@ export default function Game() {
             gameState.current = gameState.gameOver;
           }
 
-          // Pontuação
           if (p.x + this.w < bird.x - bird.radius && !p.passed) {
             p.passed = true;
             score.current++;
           }
 
-          // Limpeza de canos antigos
           if (p.x < -this.w) {
             this.pipeGenerator.shift();
           }
@@ -179,42 +171,40 @@ export default function Game() {
       }
     };
 
-    // Tela de Get Ready (Mensagem + Instruções)
+    // Tela de Get Ready
     const getReadyScreen = {
       render: function () {
         if (gameState.current === gameState.getReady) {
-          // Imagem "Get Ready!"
           ctx.drawImage(getReadyImg, cvs.width / 2 - 90, 100, 180, 50);
-          // Imagem de instruções do toque (TAP / Hand)
           ctx.drawImage(instructionsImg, cvs.width / 2 - 57, 200, 114, 98);
         }
       }
     };
 
-    // Renderização da pontuação na tela
+    // Renderização da pontuação em estilo retrô no Canvas
     const scoreDisplay = {
       render: function () {
-        ctx.fillStyle = "#FFF";
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.font = "35px Teko, sans-serif";
-        ctx.textAlign = "center";
-
         if (gameState.current === gameState.play) {
-          ctx.fillText(score.current, cvs.width / 2, 50);
+          ctx.save();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+          ctx.font = 'bold 36px sans-serif';
+          ctx.textAlign = 'center';
+          
           ctx.strokeText(score.current, cvs.width / 2, 50);
+          ctx.fillText(score.current, cvs.width / 2, 50);
+          ctx.restore();
         }
       }
     };
 
     // Loop do Canvas
     function loop() {
-      // Updates
       bird.update();
       ground.position();
       pipes.position();
 
-      // Desenho
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       bg.render();
       pipes.render();
