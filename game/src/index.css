@@ -1,34 +1,56 @@
 @import "tailwindcss";
 
+/* RESET GLOBAL */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
 }
 
-body {
-    background-color: black;
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* ESTRUTURA DA PÁGINA */
+html,
+body,
+#root {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
 }
 
-.game-container {
-    height: 100vh;
+body {
+    background-color: black;
+
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
+/* CONTAINER DO JOGO */
+.game-container {
+    width: 100%;
+    height: 100dvh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    overflow: hidden;
+}
+
+/* CANVAS DO JOGO */
 canvas {
     background-color: black;
+
     display: block;
-    height: 100vh;
+
+    height: 100dvh;
     width: auto;
+
     aspect-ratio: 300 / 500;
+
+    max-width: 100vw;
+    max-height: 100dvh;
 }
