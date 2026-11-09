@@ -327,8 +327,7 @@ export default function Game() {
           ctx.textAlign = 'center';
 
           // Durante o Get Ready, o zero aparece acima do título
-          const scoreY = gameState.current === gameState.getReady ? 90 : 50;
-
+          const scoreY = 35;
           ctx.strokeText(score.current, cvs.width / 2, scoreY);
           ctx.fillText(score.current, cvs.width / 2, scoreY);
 
