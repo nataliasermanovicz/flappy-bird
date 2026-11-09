@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -6,6 +7,8 @@ import bgDay from '../assets/sprites/background-day.png';
 import baseImg from '../assets/sprites/base.png';
 import flappyTitle from '../assets/sprites/flappy-bird.png';
 import birdMid from '../assets/sprites/bird-midflap.png';
+import birdUp from '../assets/sprites/bird-upflap.png';
+import birdDown from '../assets/sprites/bird-downflap.png';
 import playBtnImg from '../assets/sprites/play-game.png';
 import rankBtnImg from '../assets/sprites/rank.png';
 
@@ -19,6 +22,19 @@ import instrucoesImg from '../assets/sprites/instrucoes.png';
 
 export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
+  const [birdFrame, setBirdFrame] = useState(0);
+
+  // Frames de animação do passarinho
+  const birdFrames = [birdUp, birdMid, birdDown];
+
+  // Animação contínua das asas
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBirdFrame((previous) => (previous + 1) % birdFrames.length);
+    }, 120);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let timer;
@@ -53,15 +69,16 @@ export default function Home() {
         }}
       >
 
-        {/* BOTÕES SUPERIORES (Espaçamento aumentado para pt-12 e px-10) */}
-<div
-  className="w-full pt-12 flex justify-between items-center z-30 shrink-0 box-border"
-  style={{
-    paddingLeft: '6px',
-    paddingRight: '6px',
-    paddingTop: '6px'
-  }}
->          {/* MENU E SOM */}
+        {/* BOTÕES SUPERIORES */}
+        <div
+          className="w-full pt-12 flex justify-between items-center z-30 shrink-0 box-border"
+          style={{
+            paddingLeft: '6px',
+            paddingRight: '6px',
+            paddingTop: '6px'
+          }}
+        >
+          {/* MENU E SOM */}
           <div className="flex gap-4 items-center">
 
             <button
@@ -126,10 +143,11 @@ export default function Home() {
               className="w-[190px] sm:w-[210px] h-auto drop-shadow-md"
             />
 
+            {/* PASSARINHO ANIMADO */}
             <img
-              src={birdMid}
+              src={birdFrames[birdFrame]}
               alt="Bird"
-              className="w-9 sm:w-10 h-auto animate-bounce"
+              className="w-9 sm:w-10 h-auto"
             />
 
           </div>
