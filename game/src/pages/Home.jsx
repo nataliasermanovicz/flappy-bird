@@ -53,10 +53,15 @@ export default function Home() {
         }}
       >
 
-        {/* BOTÕES SUPERIORES */}
-        <div className="w-full pt-4 px-5 flex justify-between items-center z-30 shrink-0 box-border">
-
-          {/* MENU E SOM */}
+        {/* BOTÕES SUPERIORES (Espaçamento aumentado para pt-12 e px-10) */}
+<div
+  className="w-full pt-12 flex justify-between items-center z-30 shrink-0 box-border"
+  style={{
+    paddingLeft: '6px',
+    paddingRight: '6px',
+    paddingTop: '6px'
+  }}
+>          {/* MENU E SOM */}
           <div className="flex gap-4 items-center">
 
             <button
