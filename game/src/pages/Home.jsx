@@ -161,33 +161,51 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ÁREA CENTRAL */}
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-8 z-10 w-full">
-          
-          {/* TÍTULO E PASSARINHO COM ANIMAÇÃO DE FLUTUAR */}
-          <div className="flex items-center justify-center gap-3 w-full px-4 animate-float">
-            <img src={flappyTitle} alt="Flappy Bird" className="w-[190px] sm:w-[210px] h-auto drop-shadow-md" />
-            <img src={birdFrames[birdFrame]} alt="Bird" className="w-9 sm:w-10 h-auto" />
-          </div>
+{/* ÁREA CENTRAL */}
+<div className="flex-1 min-h-0 flex flex-col items-center relative z-10 w-full">
 
-          {/* BOTÕES PLAY E RANKING */}
-          <div className="flex gap-4 w-full justify-center px-4">
-            <Link
-              to="/game"
-              onClick={handlePlayClick}
-              className="w-[115px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
-            >
-              <img src={playBtnImg} alt="Iniciar Jogo" className="w-full h-auto cursor-pointer" />
-            </Link>
+  {/* TÍTULO E PASSARINHO */}
+  <div className="absolute top-[35%] flex items-center justify-center gap-4 w-full px-3 animate-float">
+    <img
+      src={flappyTitle}
+      alt="Flappy Bird"
+      className="w-[240px] sm:w-[270px] h-auto drop-shadow-md"
+    />
 
-            <Link
-              to="/ranking"
-              className="w-[115px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
-            >
-              <img src={rankBtnImg} alt="Ver Ranking" className="w-full h-auto cursor-pointer" />
-            </Link>
-          </div>
-        </div>
+    <img
+      src={birdFrames[birdFrame]}
+      alt="Bird"
+      className="w-12 sm:w-14 h-auto"
+    />
+  </div>
+
+  {/* BOTÕES PLAY E RANKING PRÓXIMOS AO CHÃO */}
+  <div className="absolute bottom-[3%] flex gap-5 w-full justify-center px-4">
+    <Link
+      to="/game"
+      onClick={handlePlayClick}
+      className="w-[125px] sm:w-[135px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
+    >
+      <img
+        src={playBtnImg}
+        alt="Iniciar Jogo"
+        className="w-full h-auto cursor-pointer"
+      />
+    </Link>
+
+    <Link
+      to="/ranking"
+      className="w-[125px] sm:w-[135px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
+    >
+      <img
+        src={rankBtnImg}
+        alt="Ver Ranking"
+        className="w-full h-auto cursor-pointer"
+      />
+    </Link>
+  </div>
+
+</div>
 
         {/* CHÃO CORRENDO */}
         <div className="w-full shrink-0 z-10 overflow-hidden">
