@@ -79,6 +79,27 @@ export default function Home() {
 
   return (
     <div className="flex justify-center items-center w-screen h-dvh bg-black overflow-hidden select-none">
+      
+      {/* ESTILOS CSS PARA AS ANIMAÇÕES DA HOME */}
+      <style>
+        {`
+          @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
+          }
+          .animate-float {
+            animation: float 0.8s ease-in-out infinite; 
+          }
+
+          @keyframes scrollGround {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+          }
+          .animate-scroll {
+            animation: scrollGround 2.7s linear infinite;
+          }
+        `}
+      </style>
 
       {/* CONTAINER PRINCIPAL DO JOGO */}
       <div
@@ -142,8 +163,9 @@ export default function Home() {
 
         {/* ÁREA CENTRAL */}
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-8 z-10 w-full">
-          {/* TÍTULO E PASSARINHO */}
-          <div className="flex items-center justify-center gap-3 w-full px-4">
+          
+          {/* TÍTULO E PASSARINHO COM ANIMAÇÃO DE FLUTUAR */}
+          <div className="flex items-center justify-center gap-3 w-full px-4 animate-float">
             <img src={flappyTitle} alt="Flappy Bird" className="w-[190px] sm:w-[210px] h-auto drop-shadow-md" />
             <img src={birdFrames[birdFrame]} alt="Bird" className="w-9 sm:w-10 h-auto" />
           </div>
@@ -167,9 +189,13 @@ export default function Home() {
           </div>
         </div>
 
-        {/* CHÃO */}
+        {/* CHÃO CORRENDO */}
         <div className="w-full shrink-0 z-10 overflow-hidden">
-          <img src={baseImg} alt="" className="block w-full h-auto" />
+          {/* Container com o dobro do tamanho (200%) para caber duas imagens lado a lado */}
+          <div className="flex w-[200%] animate-scroll">
+            <img src={baseImg} alt="" className="block w-1/2 h-auto" />
+            <img src={baseImg} alt="" className="block w-1/2 h-auto" />
+          </div>
         </div>
 
         {/* 4. CAMADA DE TRANSIÇÃO (OVERLAY ESCURO) */}

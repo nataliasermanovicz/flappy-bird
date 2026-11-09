@@ -14,7 +14,8 @@ import instructionsImgSrc from '../assets/sprites/instrucoes.png';
 // Importando os arquivos de áudio
 import wingSoundSrc from '../assets/sounds/wing.ogg'; 
 import pointSoundSrc from '../assets/sounds/point.ogg';
-import hitSoundSrc from '../assets/sounds/hit.ogg'; // NOVO: Som de colisão
+import hitSoundSrc from '../assets/sounds/hit.ogg'; 
+import dieSoundSrc from '../assets/sounds/die.ogg'; // NOVO: Som de morte
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -60,7 +61,8 @@ export default function Game() {
     // Objetos de áudio
     const wingSound = new Audio(wingSoundSrc);
     const pointSound = new Audio(pointSoundSrc);
-    const hitSound = new Audio(hitSoundSrc); // NOVO: Instância do som de colisão
+    const hitSound = new Audio(hitSoundSrc);
+    const dieSound = new Audio(dieSoundSrc); // NOVO: Instância do som
 
     let frame = 0;
     const score = { current: 0 };
@@ -116,7 +118,8 @@ export default function Game() {
       },
 
       update: function () {
-        if (frame % 5 === 0) {
+        // NOVO: O pássaro só bate as asas se não estiver no estado GameOver
+        if (gameState.current !== gameState.gameOver && frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
 
@@ -137,17 +140,36 @@ export default function Game() {
             targetRotation - this.rotation
           ) * 0.18;
 
-          // Colisão com o chão
+          // Colisão direto com o chão
           if (this.y + this.h / 2 >= ground.y) {
             this.y = ground.y - this.h / 2;
             
-            // NOVO: Som de impacto ao bater no chão
             if (gameState.current === gameState.play) {
               hitSound.currentTime = 0;
               hitSound.play().catch(err => console.log(err));
             }
 
             gameState.current = gameState.gameOver;
+          }
+          
+          // NOVO: Lógica de queda quando bater no cano
+        } else if (gameState.current === gameState.gameOver) {
+          // Se o pássaro ainda não atingiu o chão, ele continua caindo
+          if (this.y + this.h / 2 < ground.y) {
+            this.speed += this.gravity;
+            this.y += this.speed;
+            
+            // Controle a velocidade da rotação aqui! 
+            // 0.1 é uma velocidade boa, se quiser mais devagar use 0.05, se quiser mais rápido use 0.2
+            if (this.rotation < Math.PI / 2) {
+              this.rotation += 0.1; 
+            } else {
+              this.rotation = Math.PI / 2; // Trava exatamente nos 90 graus
+            }
+            
+          } else {
+            // Quando finalmente encostar no chão
+            this.y = ground.y - this.h / 2;
           }
         }
       }
@@ -244,9 +266,14 @@ export default function Game() {
               bird.y + bird.radius > p.y + this.h + this.gap
             )
           ) {
-            // NOVO: Som de impacto ao bater no cano
+            
+            // Toca o som de impacto
             hitSound.currentTime = 0;
             hitSound.play().catch(err => console.log(err));
+
+            // NOVO: Toca o som de morte logo após o impacto com o cano
+            dieSound.currentTime = 0;
+            dieSound.play().catch(err => console.log(err));
 
             gameState.current = gameState.gameOver;
           }
@@ -327,7 +354,10 @@ export default function Game() {
           break;
 
         case gameState.gameOver:
-          navigate('/ranking');
+          // NOVO: Impede que o usuário clique e vá pro ranking antes do pássaro cair no chão
+          if (bird.y + bird.h / 2 >= ground.y) {
+            navigate('/ranking');
+          }
           break;
       }
     };
