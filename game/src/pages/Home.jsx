@@ -127,38 +127,50 @@ export default function Home() {
           {/* MENU E SOM */}
           <div className="flex gap-4 items-center">
             <button
-              className="w-8 h-8 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
+              className="w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
               aria-label="Menu"
             >
               <img src={menuBtnImg} alt="Menu" className="w-full h-full object-contain" />
             </button>
 
             <button
-              className="w-8 h-8 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
+              className="w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
               aria-label="Som"
             >
               <img src={soundBtnImg} alt="Som" className="w-full h-full object-contain" />
             </button>
           </div>
 
-          {/* AJUDA */}
-          <div className="flex justify-end items-center z-30">
-            {showHelp ? (
-              <img
-                src={instrucoesImg}
-                alt="Instruções"
-                className="w-36 h-auto object-contain drop-shadow-md animate-fade-in"
-              />
-            ) : (
-              <button
-                onClick={handleShowHelp}
-                className="w-8 h-8 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
-                aria-label="Ajuda"
-              >
-                <img src={helpBtnImg} alt="Ajuda" className="w-full h-full object-contain" />
-              </button>
-            )}
-          </div>
+{/* AJUDA */}
+<div className="relative flex justify-end items-center z-40 w-12 h-12">
+
+  {/* BOTÃO DE AJUDA */}
+  <button
+    onClick={handleShowHelp}
+    className={`w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0 ${
+      showHelp ? 'opacity-0 pointer-events-none' : 'opacity-100'
+    }`}
+    aria-label="Ajuda"
+  >
+    <img
+      src={helpBtnImg}
+      alt="Ajuda"
+      className="w-full h-full object-contain"
+    />
+  </button>
+
+  {/* IMAGEM DE INSTRUÇÕES */}
+  <img
+    src={instrucoesImg}
+    alt="Instruções"
+    className={`absolute top-0 right-0 w-52 sm:w-60 max-w-[80vw] h-auto object-contain drop-shadow-md transition-all duration-500 ease-out ${
+      showHelp
+        ? 'translate-x-0 opacity-100'
+        : 'translate-x-[110%] opacity-0 pointer-events-none'
+    }`}
+  />
+
+</div>
         </div>
 
 {/* ÁREA CENTRAL */}
