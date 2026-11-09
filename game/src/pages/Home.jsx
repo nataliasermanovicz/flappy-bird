@@ -56,6 +56,8 @@ export default function Home() {
   }, [showHelp]);
 
   const handleShowHelp = () => {
+        const audio = new Audio(swooshSound);
+        audio.play();
     setShowHelp(true);
   };
 
@@ -151,6 +153,7 @@ export default function Home() {
       showHelp ? 'opacity-0 pointer-events-none' : 'opacity-100'
     }`}
     aria-label="Ajuda"
+    
   >
     <img
       src={helpBtnImg}
