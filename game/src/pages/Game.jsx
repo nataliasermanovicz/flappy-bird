@@ -60,17 +60,28 @@ export default function Game() {
       w: 34,
       h: 24,
       radius: 12,
+
       frameIndex: 0,
+
       speed: 0,
       gravity: 0.25,
       jump: 4.6,
+
+      // Ângulo atual de inclinação do pássaro
+      rotation: 0,
 
       render: function () {
         const currentBirdImg = birdImgs[this.frameIndex];
 
         ctx.save();
+
+        // Posiciona o centro de rotação no centro do pássaro
         ctx.translate(this.x, this.y);
 
+        // Inclina o pássaro conforme seu movimento vertical
+        ctx.rotate(this.rotation);
+
+        // Desenha o sprite centralizado
         ctx.drawImage(
           currentBirdImg,
           -this.w / 2,
@@ -83,20 +94,44 @@ export default function Game() {
       },
 
       flap: function () {
+        // Impulso para cima
         this.speed = -this.jump;
       },
 
       update: function () {
+
+        // Animação das asas
         if (frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
 
         if (gameState.current === gameState.getReady) {
+
+          // Movimento suave enquanto aguarda o início
           this.y = 180 + Math.sin(frame / 10) * 5;
 
+          // Mantém o pássaro reto na tela inicial
+          this.rotation += (0 - this.rotation) * 0.15;
+
         } else if (gameState.current === gameState.play) {
+
+          // Aplicação da gravidade
           this.speed += this.gravity;
           this.y += this.speed;
+
+          // ROTACIONAR CONFORME A VELOCIDADE
+
+          // Velocidade negativa = olhando para cima
+          // Velocidade positiva = olhando para baixo
+          const targetRotation = Math.max(
+            -0.45,
+            Math.min(1.2, this.speed * 0.12)
+          );
+
+          // Suaviza a transição entre os ângulos
+          this.rotation += (
+            targetRotation - this.rotation
+          ) * 0.18;
 
           // Colisão com o chão
           if (this.y + this.h / 2 >= ground.y) {
@@ -131,7 +166,7 @@ export default function Game() {
       w: cvs.width,
       dx: 2,
 
-      // Altura proporcional à imagem original (equivalente a h-auto)
+      // Altura proporcional à imagem original
       get h() {
         if (!baseImg.naturalWidth) return 112;
 
@@ -140,12 +175,13 @@ export default function Game() {
         );
       },
 
-      // Mantém o chão encostado na parte inferior do Canvas
+      // Mantém o chão na parte inferior do Canvas
       get y() {
         return cvs.height - this.h;
       },
 
       render: function () {
+
         // Primeiro chão
         ctx.drawImage(
           baseImg,
@@ -290,7 +326,7 @@ export default function Game() {
       }
     };
 
-    // Renderização da pontuação em estilo retrô no Canvas
+    // Renderização da pontuação
     const scoreDisplay = {
       render: function () {
         if (gameState.current === gameState.play) {
@@ -347,6 +383,7 @@ export default function Game() {
     // Clique na tela
     const handleCanvasClick = () => {
       switch (gameState.current) {
+
         case gameState.getReady:
           gameState.current = gameState.play;
           bird.flap();
