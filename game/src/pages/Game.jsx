@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 
-// Importando todos os sprites necessários
+// Sprites do jogo
 import bgImgSrc from '../assets/sprites/background-day.png';
 import baseImgSrc from '../assets/sprites/base.png';
 import pipeImgSrc from '../assets/sprites/pipe.png';
@@ -12,10 +12,22 @@ import birdUpSrc from '../assets/sprites/bird-upflap.png';
 import birdDownSrc from '../assets/sprites/bird-downflap.png';
 import getReadyImgSrc from '../assets/sprites/get-ready.png';
 
+// Sprites dos números
+import number0Src from '../assets/sprites/numbers/0.png';
+import number1Src from '../assets/sprites/numbers/1.png';
+import number2Src from '../assets/sprites/numbers/2.png';
+import number3Src from '../assets/sprites/numbers/3.png';
+import number4Src from '../assets/sprites/numbers/4.png';
+import number5Src from '../assets/sprites/numbers/5.png';
+import number6Src from '../assets/sprites/numbers/6.png';
+import number7Src from '../assets/sprites/numbers/7.png';
+import number8Src from '../assets/sprites/numbers/8.png';
+import number9Src from '../assets/sprites/numbers/9.png';
+
 // Botão de pausa
 import pauseBtnImg from '../assets/sprites/icons/pause.png';
 
-// Importando os arquivos de áudio
+// Áudios
 import wingSoundSrc from '../assets/sounds/wing.ogg';
 import pointSoundSrc from '../assets/sounds/point.ogg';
 import hitSoundSrc from '../assets/sounds/hit.ogg';
@@ -27,8 +39,6 @@ export default function Game() {
   const isPausedRef = useRef(false);
 
   const navigate = useNavigate();
-
-  // Controle global do áudio
   const { isMuted } = useAudio();
 
   const [isFadingIn, setIsFadingIn] = useState(true);
@@ -47,7 +57,7 @@ export default function Game() {
     const ctx = cvs.getContext('2d');
     let animationFrameId;
 
-    // Carregamento de Sprites
+    // Carregamento dos sprites
     const bgImg = new Image();
     bgImg.src = bgImgSrc;
 
@@ -60,7 +70,27 @@ export default function Game() {
     const getReadyImg = new Image();
     getReadyImg.src = getReadyImgSrc;
 
-    // Frames de animação do pássaro
+    // Sprites dos números
+    const numberSpritesSrc = [
+      number0Src,
+      number1Src,
+      number2Src,
+      number3Src,
+      number4Src,
+      number5Src,
+      number6Src,
+      number7Src,
+      number8Src,
+      number9Src
+    ];
+
+    const numberImgs = numberSpritesSrc.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+
+    // Frames do pássaro
     const birdImgs = [new Image(), new Image(), new Image()];
     birdImgs[0].src = birdDownSrc;
     birdImgs[1].src = birdMidSrc;
@@ -72,13 +102,16 @@ export default function Game() {
     const hitSound = new Audio(hitSoundSrc);
     const dieSound = new Audio(dieSoundSrc);
 
-    // Armazena todos os áudios para permitir o controle global
     audioInstancesRef.current = [
       wingSound,
       pointSound,
       hitSound,
       dieSound
     ];
+
+    audioInstancesRef.current.forEach((audio) => {
+      audio.muted = isMuted;
+    });
 
     let frame = 0;
     const score = { current: 0 };
@@ -109,6 +142,8 @@ export default function Game() {
       render: function () {
         const currentBirdImg = birdImgs[this.frameIndex];
 
+        if (!currentBirdImg.complete || !currentBirdImg.naturalWidth) return;
+
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
@@ -134,7 +169,6 @@ export default function Game() {
       },
 
       update: function () {
-        // O pássaro só bate as asas se não estiver no estado GameOver
         if (gameState.current !== gameState.gameOver && frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
@@ -156,14 +190,12 @@ export default function Game() {
             targetRotation - this.rotation
           ) * 0.18;
 
-          // Colisão direto com o chão
+          // Colisão com o chão
           if (this.y + this.h / 2 >= ground.y) {
             this.y = ground.y - this.h / 2;
 
-            if (gameState.current === gameState.play) {
-              hitSound.currentTime = 0;
-              hitSound.play().catch(err => console.log(err));
-            }
+            hitSound.currentTime = 0;
+            hitSound.play().catch(err => console.log(err));
 
             gameState.current = gameState.gameOver;
           }
@@ -189,13 +221,10 @@ export default function Game() {
 
     // Fundo
     const bg = {
-      x: 0,
-      y: 0,
-      w: cvs.width,
-      h: cvs.height,
-
       render: function () {
-        ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
+        if (bgImg.complete && bgImg.naturalWidth) {
+          ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
+        }
       }
     };
 
@@ -215,6 +244,8 @@ export default function Game() {
       },
 
       render: function () {
+        if (!baseImg.complete || !baseImg.naturalWidth) return;
+
         ctx.drawImage(baseImg, this.x, this.y, this.w, this.h);
         ctx.drawImage(baseImg, this.x + this.w, this.y, this.w, this.h);
       },
@@ -238,6 +269,8 @@ export default function Game() {
       pipeGenerator: [],
 
       render: function () {
+        if (!pipeImg.complete || !pipeImg.naturalWidth) return;
+
         for (let i = 0; i < this.pipeGenerator.length; i++) {
           let p = this.pipeGenerator[i];
 
@@ -287,7 +320,7 @@ export default function Game() {
             gameState.current = gameState.gameOver;
           }
 
-          // Lógica de pontuação e som de ponto
+          // Pontuação
           if (p.x + this.w < bird.x - bird.radius && !p.passed) {
             p.passed = true;
             score.current++;
@@ -303,35 +336,55 @@ export default function Game() {
       }
     };
 
-    // Tela de Get Ready
+    // Tela Get Ready
     const getReadyScreen = {
       render: function () {
-        if (gameState.current === gameState.getReady) {
+        if (
+          gameState.current === gameState.getReady &&
+          getReadyImg.complete &&
+          getReadyImg.naturalWidth
+        ) {
           ctx.drawImage(getReadyImg, cvs.width / 2 - 90, 100, 180, 50);
         }
       }
     };
 
-    // Renderização da pontuação
+    // Pontuação com sprites PNG
     const scoreDisplay = {
       render: function () {
         if (
-          gameState.current === gameState.getReady ||
-          gameState.current === gameState.play
+          gameState.current !== gameState.getReady &&
+          gameState.current !== gameState.play
         ) {
-          ctx.save();
-          ctx.fillStyle = '#FFFFFF';
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 3;
-          ctx.font = 'bold 36px sans-serif';
-          ctx.textAlign = 'center';
+          return;
+        }
 
-          // Durante o Get Ready, o zero aparece acima do título
-          const scoreY = 35;
-          ctx.strokeText(score.current, cvs.width / 2, scoreY);
-          ctx.fillText(score.current, cvs.width / 2, scoreY);
+        const scoreText = score.current.toString();
 
-          ctx.restore();
+        const digitWidth = 24;
+        const digitHeight = 36;
+        const spacing = 2;
+
+        const totalWidth =
+          scoreText.length * digitWidth +
+          (scoreText.length - 1) * spacing;
+
+        const startX = (cvs.width - totalWidth) / 2;
+        const scoreY = 17;
+
+        for (let i = 0; i < scoreText.length; i++) {
+          const digit = Number(scoreText[i]);
+          const numberImg = numberImgs[digit];
+
+          if (numberImg.complete && numberImg.naturalWidth > 0) {
+            ctx.drawImage(
+              numberImg,
+              startX + i * (digitWidth + spacing),
+              scoreY,
+              digitWidth,
+              digitHeight
+            );
+          }
         }
       }
     };
@@ -359,7 +412,7 @@ export default function Game() {
       }
     };
 
-    // Loop principal do jogo
+    // Loop principal
     function loop() {
       if (!isPausedRef.current) {
         bird.update();
@@ -412,7 +465,6 @@ export default function Game() {
       cancelAnimationFrame(animationFrameId);
       cvs.removeEventListener('click', handleCanvasClick);
 
-      // Limpa as instâncias de áudio ao sair do jogo
       audioInstancesRef.current.forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
@@ -423,14 +475,14 @@ export default function Game() {
 
   }, [navigate]);
 
-  // Atualiza o estado de todos os áudios sempre que o usuário alternar o som
+  // Atualiza o estado dos áudios quando o usuário alternar o som
   useEffect(() => {
     audioInstancesRef.current.forEach((audio) => {
       audio.muted = isMuted;
     });
   }, [isMuted]);
 
-  // Controla o botão de pausa
+  // Controle do botão de pausa
   const handlePause = () => {
     const nextPausedState = !isPausedRef.current;
 
