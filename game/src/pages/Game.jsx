@@ -1,5 +1,4 @@
-
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react'; // 1. Adicionado useState
 import { useNavigate } from 'react-router-dom';
 
 // Importando todos os sprites necessários da sua pasta
@@ -15,6 +14,20 @@ import instructionsImgSrc from '../assets/sprites/instrucoes.png';
 export default function Game() {
   const canvasRef = useRef(null);
   const navigate = useNavigate();
+
+  // 2. Estado para controlar o clareamento da tela
+  const [isFadingIn, setIsFadingIn] = useState(true);
+
+  // 3. Effect para iniciar o fade-in assim que a tela abre
+  useEffect(() => {
+    // Um pequeno atraso (50ms) garante que o navegador renderize a tela preta
+    // antes de começarmos a transição para transparente.
+    const timer = setTimeout(() => {
+      setIsFadingIn(false);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const cvs = canvasRef.current;
@@ -411,13 +424,22 @@ export default function Game() {
   }, [navigate]);
 
   return (
-    <div className="game-container">
+    // 4. Adicionado o flex center para alinhar e classe 'relative' para prender a camada absoluta preta a este container.
+    <div className="game-container relative flex justify-center items-center w-screen h-dvh bg-black">
       <canvas
         ref={canvasRef}
         id="game"
         width="300"
         height="500"
+        className="shadow-2xl"
       ></canvas>
+
+      {/* 5. CAMADA DE TRANSIÇÃO (OVERLAY ESCURO REVERSO) */}
+      <div 
+        className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
+          isFadingIn ? 'opacity-100' : 'opacity-0'
+        }`}
+      ></div>
     </div>
   );
 }

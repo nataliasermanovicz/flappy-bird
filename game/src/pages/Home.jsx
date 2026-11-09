@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Importações dos sprites
 import bgDay from '../assets/sprites/background-day.png';
@@ -20,9 +19,17 @@ import helpBtnImg from '../assets/sprites/icons/help.png';
 // Instruções
 import instrucoesImg from '../assets/sprites/instrucoes.png';
 
+// Importação do som
+import swooshSound from '../assets/sounds/swoosh.ogg';
+
 export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
   const [birdFrame, setBirdFrame] = useState(0);
+  
+  // 1. Estado para controlar o escurecimento da tela
+  const [isFading, setIsFading] = useState(false); 
+
+  const navigate = useNavigate();
 
   // Frames de animação do passarinho
   const birdFrames = [birdUp, birdMid, birdDown];
@@ -50,6 +57,24 @@ export default function Home() {
 
   const handleShowHelp = () => {
     setShowHelp(true);
+  };
+
+  const handlePlayClick = (e) => {
+    e.preventDefault(); 
+    
+    // Evita múltiplos cliques se a transição já começou
+    if (isFading) return; 
+
+    const audio = new Audio(swooshSound);
+    audio.play();
+
+    // 2. Ativa o escurecimento da tela
+    setIsFading(true);
+
+    // 3. Aguarda 500ms (meio segundo) para a tela ficar preta e então muda de página
+    setTimeout(() => {
+      navigate('/game');
+    }, 500); 
   };
 
   return (
@@ -80,34 +105,23 @@ export default function Home() {
         >
           {/* MENU E SOM */}
           <div className="flex gap-4 items-center">
-
             <button
               className="w-8 h-8 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
               aria-label="Menu"
             >
-              <img
-                src={menuBtnImg}
-                alt="Menu"
-                className="w-full h-full object-contain"
-              />
+              <img src={menuBtnImg} alt="Menu" className="w-full h-full object-contain" />
             </button>
 
             <button
               className="w-8 h-8 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
               aria-label="Som"
             >
-              <img
-                src={soundBtnImg}
-                alt="Som"
-                className="w-full h-full object-contain"
-              />
+              <img src={soundBtnImg} alt="Som" className="w-full h-full object-contain" />
             </button>
-
           </div>
 
           {/* AJUDA */}
           <div className="flex justify-end items-center z-30">
-
             {showHelp ? (
               <img
                 src={instrucoesImg}
@@ -120,74 +134,50 @@ export default function Home() {
                 className="w-8 h-8 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
                 aria-label="Ajuda"
               >
-                <img
-                  src={helpBtnImg}
-                  alt="Ajuda"
-                  className="w-full h-full object-contain"
-                />
+                <img src={helpBtnImg} alt="Ajuda" className="w-full h-full object-contain" />
               </button>
             )}
-
           </div>
         </div>
 
         {/* ÁREA CENTRAL */}
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-8 z-10 w-full">
-
           {/* TÍTULO E PASSARINHO */}
           <div className="flex items-center justify-center gap-3 w-full px-4">
-
-            <img
-              src={flappyTitle}
-              alt="Flappy Bird"
-              className="w-[190px] sm:w-[210px] h-auto drop-shadow-md"
-            />
-
-            {/* PASSARINHO ANIMADO */}
-            <img
-              src={birdFrames[birdFrame]}
-              alt="Bird"
-              className="w-9 sm:w-10 h-auto"
-            />
-
+            <img src={flappyTitle} alt="Flappy Bird" className="w-[190px] sm:w-[210px] h-auto drop-shadow-md" />
+            <img src={birdFrames[birdFrame]} alt="Bird" className="w-9 sm:w-10 h-auto" />
           </div>
 
           {/* BOTÕES PLAY E RANKING */}
           <div className="flex gap-4 w-full justify-center px-4">
-
             <Link
               to="/game"
+              onClick={handlePlayClick}
               className="w-[115px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
             >
-              <img
-                src={playBtnImg}
-                alt="Iniciar Jogo"
-                className="w-full h-auto cursor-pointer"
-              />
+              <img src={playBtnImg} alt="Iniciar Jogo" className="w-full h-auto cursor-pointer" />
             </Link>
 
             <Link
               to="/ranking"
               className="w-[115px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
             >
-              <img
-                src={rankBtnImg}
-                alt="Ver Ranking"
-                className="w-full h-auto cursor-pointer"
-              />
+              <img src={rankBtnImg} alt="Ver Ranking" className="w-full h-auto cursor-pointer" />
             </Link>
-
           </div>
         </div>
 
         {/* CHÃO */}
         <div className="w-full shrink-0 z-10 overflow-hidden">
-          <img
-            src={baseImg}
-            alt=""
-            className="block w-full h-auto"
-          />
+          <img src={baseImg} alt="" className="block w-full h-auto" />
         </div>
+
+        {/* 4. CAMADA DE TRANSIÇÃO (OVERLAY ESCURO) */}
+        <div 
+          className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
+            isFading ? 'opacity-100' : 'opacity-0'
+          }`}
+        ></div>
 
       </div>
     </div>
