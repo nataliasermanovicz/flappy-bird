@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Importando todos os sprites necessários da sua pasta
+// Importando todos os sprites necessários
 import bgImgSrc from '../assets/sprites/background-day.png';
 import baseImgSrc from '../assets/sprites/base.png';
 import pipeImgSrc from '../assets/sprites/pipe.png';
@@ -11,8 +11,10 @@ import birdDownSrc from '../assets/sprites/bird-downflap.png';
 import getReadyImgSrc from '../assets/sprites/get-ready.png';
 import instructionsImgSrc from '../assets/sprites/instrucoes.png';
 
-// NOVO: Importe o arquivo de áudio (ajuste o caminho da pasta conforme a estrutura do seu projeto)
+// Importando os arquivos de áudio
 import wingSoundSrc from '../assets/sounds/wing.ogg'; 
+import pointSoundSrc from '../assets/sounds/point.ogg';
+import hitSoundSrc from '../assets/sounds/hit.ogg'; // NOVO: Som de colisão
 
 export default function Game() {
   const canvasRef = useRef(null);
@@ -55,8 +57,10 @@ export default function Game() {
     birdImgs[1].src = birdMidSrc;
     birdImgs[2].src = birdUpSrc;
 
-    // NOVO: Criando o objeto de áudio
+    // Objetos de áudio
     const wingSound = new Audio(wingSoundSrc);
+    const pointSound = new Audio(pointSoundSrc);
+    const hitSound = new Audio(hitSoundSrc); // NOVO: Instância do som de colisão
 
     let frame = 0;
     const score = { current: 0 };
@@ -82,7 +86,6 @@ export default function Game() {
       gravity: 0.25,
       jump: 4.6,
 
-      // Ângulo atual de inclinação do pássaro
       rotation: 0,
 
       render: function () {
@@ -104,20 +107,15 @@ export default function Game() {
       },
 
       flap: function () {
-        // Impulso para cima
         this.speed = -this.jump;
 
-        // NOVO: Toca o som de bater as asas
-        // Zerar o currentTime garante que o som toque desde o início em cliques rápidos
         wingSound.currentTime = 0; 
         wingSound.play().catch((err) => {
-           // O navegador pode bloquear o áudio antes da primeira interação do usuário
            console.log("Áudio bloqueado ou não carregado:", err);
         });
       },
 
       update: function () {
-        // Animação das asas
         if (frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
@@ -139,8 +137,16 @@ export default function Game() {
             targetRotation - this.rotation
           ) * 0.18;
 
+          // Colisão com o chão
           if (this.y + this.h / 2 >= ground.y) {
             this.y = ground.y - this.h / 2;
+            
+            // NOVO: Som de impacto ao bater no chão
+            if (gameState.current === gameState.play) {
+              hitSound.currentTime = 0;
+              hitSound.play().catch(err => console.log(err));
+            }
+
             gameState.current = gameState.gameOver;
           }
         }
@@ -229,6 +235,7 @@ export default function Game() {
 
           p.x -= this.dx;
 
+          // Colisão com os canos
           if (
             bird.x + bird.radius > p.x &&
             bird.x - bird.radius < p.x + this.w &&
@@ -237,12 +244,20 @@ export default function Game() {
               bird.y + bird.radius > p.y + this.h + this.gap
             )
           ) {
+            // NOVO: Som de impacto ao bater no cano
+            hitSound.currentTime = 0;
+            hitSound.play().catch(err => console.log(err));
+
             gameState.current = gameState.gameOver;
           }
 
+          // Lógica de pontuação e som de ponto
           if (p.x + this.w < bird.x - bird.radius && !p.passed) {
             p.passed = true;
             score.current++;
+            
+            pointSound.currentTime = 0;
+            pointSound.play().catch(err => console.log(err));
           }
 
           if (p.x < -this.w) {
