@@ -1,5 +1,7 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAudio } from '../context/AudioContext';
 
 // Importando todos os sprites necessários
 import bgImgSrc from '../assets/sprites/background-day.png';
@@ -12,14 +14,19 @@ import getReadyImgSrc from '../assets/sprites/get-ready.png';
 import instructionsImgSrc from '../assets/sprites/instrucoes.png';
 
 // Importando os arquivos de áudio
-import wingSoundSrc from '../assets/sounds/wing.ogg'; 
+import wingSoundSrc from '../assets/sounds/wing.ogg';
 import pointSoundSrc from '../assets/sounds/point.ogg';
-import hitSoundSrc from '../assets/sounds/hit.ogg'; 
-import dieSoundSrc from '../assets/sounds/die.ogg'; // NOVO: Som de morte
+import hitSoundSrc from '../assets/sounds/hit.ogg';
+import dieSoundSrc from '../assets/sounds/die.ogg';
 
 export default function Game() {
   const canvasRef = useRef(null);
+  const audioInstancesRef = useRef([]);
+
   const navigate = useNavigate();
+
+  // Controle global do áudio
+  const { isMuted } = useAudio();
 
   const [isFadingIn, setIsFadingIn] = useState(true);
 
@@ -62,7 +69,15 @@ export default function Game() {
     const wingSound = new Audio(wingSoundSrc);
     const pointSound = new Audio(pointSoundSrc);
     const hitSound = new Audio(hitSoundSrc);
-    const dieSound = new Audio(dieSoundSrc); // NOVO: Instância do som
+    const dieSound = new Audio(dieSoundSrc);
+
+    // Armazena todos os áudios para permitir o controle global
+    audioInstancesRef.current = [
+      wingSound,
+      pointSound,
+      hitSound,
+      dieSound
+    ];
 
     let frame = 0;
     const score = { current: 0 };
@@ -111,14 +126,14 @@ export default function Game() {
       flap: function () {
         this.speed = -this.jump;
 
-        wingSound.currentTime = 0; 
+        wingSound.currentTime = 0;
         wingSound.play().catch((err) => {
-           console.log("Áudio bloqueado ou não carregado:", err);
+          console.log('Áudio bloqueado ou não carregado:', err);
         });
       },
 
       update: function () {
-        // NOVO: O pássaro só bate as asas se não estiver no estado GameOver
+        // O pássaro só bate as asas se não estiver no estado GameOver
         if (gameState.current !== gameState.gameOver && frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
@@ -143,7 +158,7 @@ export default function Game() {
           // Colisão direto com o chão
           if (this.y + this.h / 2 >= ground.y) {
             this.y = ground.y - this.h / 2;
-            
+
             if (gameState.current === gameState.play) {
               hitSound.currentTime = 0;
               hitSound.play().catch(err => console.log(err));
@@ -151,22 +166,21 @@ export default function Game() {
 
             gameState.current = gameState.gameOver;
           }
-          
-          // NOVO: Lógica de queda quando bater no cano
+
+          // Lógica de queda quando bater no cano
         } else if (gameState.current === gameState.gameOver) {
           // Se o pássaro ainda não atingiu o chão, ele continua caindo
           if (this.y + this.h / 2 < ground.y) {
             this.speed += this.gravity;
             this.y += this.speed;
-            
-            // Controle a velocidade da rotação aqui! 
-            // 0.1 é uma velocidade boa, se quiser mais devagar use 0.05, se quiser mais rápido use 0.2
+
+            // Controle da velocidade da rotação
             if (this.rotation < Math.PI / 2) {
-              this.rotation += 0.1; 
+              this.rotation += 0.1;
             } else {
-              this.rotation = Math.PI / 2; // Trava exatamente nos 90 graus
+              this.rotation = Math.PI / 2;
             }
-            
+
           } else {
             // Quando finalmente encostar no chão
             this.y = ground.y - this.h / 2;
@@ -266,12 +280,12 @@ export default function Game() {
               bird.y + bird.radius > p.y + this.h + this.gap
             )
           ) {
-            
+
             // Toca o som de impacto
             hitSound.currentTime = 0;
             hitSound.play().catch(err => console.log(err));
 
-            // NOVO: Toca o som de morte logo após o impacto com o cano
+            // Toca o som de morte
             dieSound.currentTime = 0;
             dieSound.play().catch(err => console.log(err));
 
@@ -282,7 +296,7 @@ export default function Game() {
           if (p.x + this.w < bird.x - bird.radius && !p.passed) {
             p.passed = true;
             score.current++;
-            
+
             pointSound.currentTime = 0;
             pointSound.play().catch(err => console.log(err));
           }
@@ -323,6 +337,7 @@ export default function Game() {
       }
     };
 
+    // Loop principal do jogo
     function loop() {
       bird.update();
       ground.position();
@@ -342,6 +357,7 @@ export default function Game() {
       animationFrameId = requestAnimationFrame(loop);
     }
 
+    // Clique no canvas
     const handleCanvasClick = () => {
       switch (gameState.current) {
         case gameState.getReady:
@@ -354,7 +370,7 @@ export default function Game() {
           break;
 
         case gameState.gameOver:
-          // NOVO: Impede que o usuário clique e vá pro ranking antes do pássaro cair no chão
+          // Impede que o usuário vá para o ranking antes do pássaro cair no chão
           if (bird.y + bird.h / 2 >= ground.y) {
             navigate('/ranking');
           }
@@ -369,9 +385,24 @@ export default function Game() {
     return () => {
       cancelAnimationFrame(animationFrameId);
       cvs.removeEventListener('click', handleCanvasClick);
+
+      // Limpa as instâncias de áudio ao sair do jogo
+      audioInstancesRef.current.forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+
+      audioInstancesRef.current = [];
     };
 
   }, [navigate]);
+
+  // Atualiza o estado de todos os áudios sempre que o usuário alternar o som
+  useEffect(() => {
+    audioInstancesRef.current.forEach((audio) => {
+      audio.muted = isMuted;
+    });
+  }, [isMuted]);
 
   return (
     <div className="game-container relative flex justify-center items-center w-screen h-dvh bg-black">
@@ -383,7 +414,7 @@ export default function Game() {
         className="shadow-2xl"
       ></canvas>
 
-      <div 
+      <div
         className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
           isFadingIn ? 'opacity-100' : 'opacity-0'
         }`}
