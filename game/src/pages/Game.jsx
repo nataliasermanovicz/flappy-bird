@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,11 +22,20 @@ export default function Game() {
     let animationFrameId;
 
     // Carregamento de Sprites
-    const bgImg = new Image(); bgImg.src = bgImgSrc;
-    const baseImg = new Image(); baseImg.src = baseImgSrc;
-    const pipeImg = new Image(); pipeImg.src = pipeImgSrc;
-    const getReadyImg = new Image(); getReadyImg.src = getReadyImgSrc;
-    const instructionsImg = new Image(); instructionsImg.src = instructionsImgSrc;
+    const bgImg = new Image();
+    bgImg.src = bgImgSrc;
+
+    const baseImg = new Image();
+    baseImg.src = baseImgSrc;
+
+    const pipeImg = new Image();
+    pipeImg.src = pipeImgSrc;
+
+    const getReadyImg = new Image();
+    getReadyImg.src = getReadyImgSrc;
+
+    const instructionsImg = new Image();
+    instructionsImg.src = instructionsImgSrc;
 
     // Frames de animação do pássaro
     const birdImgs = [new Image(), new Image(), new Image()];
@@ -54,12 +64,21 @@ export default function Game() {
       speed: 0,
       gravity: 0.25,
       jump: 4.6,
-      
+
       render: function () {
         const currentBirdImg = birdImgs[this.frameIndex];
+
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.drawImage(currentBirdImg, -this.w / 2, -this.h / 2, this.w, this.h);
+
+        ctx.drawImage(
+          currentBirdImg,
+          -this.w / 2,
+          -this.h / 2,
+          this.w,
+          this.h
+        );
+
         ctx.restore();
       },
 
@@ -74,12 +93,14 @@ export default function Game() {
 
         if (gameState.current === gameState.getReady) {
           this.y = 180 + Math.sin(frame / 10) * 5;
+
         } else if (gameState.current === gameState.play) {
           this.speed += this.gravity;
           this.y += this.speed;
 
-          if (this.y + this.h / 2 >= cvs.height - 112) {
-            this.y = cvs.height - 112 - this.h / 2;
+          // Colisão com o chão
+          if (this.y + this.h / 2 >= ground.y) {
+            this.y = ground.y - this.h / 2;
             gameState.current = gameState.gameOver;
           }
         }
@@ -91,26 +112,65 @@ export default function Game() {
       x: 0,
       y: 0,
       w: cvs.width,
-      h: cvs.height - 112,
+      h: cvs.height,
+
       render: function () {
-        ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
+        ctx.drawImage(
+          bgImg,
+          0,
+          0,
+          cvs.width,
+          cvs.height
+        );
       }
     };
 
     // Chão
     const ground = {
       x: 0,
-      y: cvs.height - 112,
-      w: 224,
-      h: 112,
+      w: cvs.width,
       dx: 2,
-      render: function () {
-        ctx.drawImage(baseImg, this.x, this.y, cvs.width, this.h);
-        ctx.drawImage(baseImg, this.x + cvs.width, this.y, cvs.width, this.h);
+
+      // Altura proporcional à imagem original (equivalente a h-auto)
+      get h() {
+        if (!baseImg.naturalWidth) return 112;
+
+        return this.w * (
+          baseImg.naturalHeight / baseImg.naturalWidth
+        );
       },
+
+      // Mantém o chão encostado na parte inferior do Canvas
+      get y() {
+        return cvs.height - this.h;
+      },
+
+      render: function () {
+        // Primeiro chão
+        ctx.drawImage(
+          baseImg,
+          this.x,
+          this.y,
+          this.w,
+          this.h
+        );
+
+        // Segundo chão para movimento contínuo
+        ctx.drawImage(
+          baseImg,
+          this.x + this.w,
+          this.y,
+          this.w,
+          this.h
+        );
+      },
+
       position: function () {
-        if (gameState.current === gameState.play || gameState.current === gameState.getReady) {
-          this.x = (this.x - this.dx) % (cvs.width / 2);
+        if (
+          gameState.current === gameState.play ||
+          gameState.current === gameState.getReady
+        ) {
+          this.x = (this.x - this.dx) % this.w;
         }
       }
     };
@@ -122,48 +182,84 @@ export default function Game() {
       gap: 100,
       dx: 2,
       pipeGenerator: [],
+
       render: function () {
         for (let i = 0; i < this.pipeGenerator.length; i++) {
           let p = this.pipeGenerator[i];
+
           let topPipeY = p.y;
           let bottomPipeY = p.y + this.h + this.gap;
 
-          ctx.drawImage(pipeImg, p.x, bottomPipeY, this.w, this.h);
+          // Cano inferior
+          ctx.drawImage(
+            pipeImg,
+            p.x,
+            bottomPipeY,
+            this.w,
+            this.h
+          );
 
+          // Cano superior invertido
           ctx.save();
-          ctx.translate(p.x + this.w / 2, topPipeY + this.h / 2);
+
+          ctx.translate(
+            p.x + this.w / 2,
+            topPipeY + this.h / 2
+          );
+
           ctx.scale(1, -1);
-          ctx.drawImage(pipeImg, -this.w / 2, -this.h / 2, this.w, this.h);
+
+          ctx.drawImage(
+            pipeImg,
+            -this.w / 2,
+            -this.h / 2,
+            this.w,
+            this.h
+          );
+
           ctx.restore();
         }
       },
+
       position: function () {
         if (gameState.current !== gameState.play) return;
 
         if (frame % 100 === 0) {
           this.pipeGenerator.push({
             x: cvs.width,
-            y: Math.floor(Math.random() * (-100 - -260 + 1)) + -260
+            y: Math.floor(
+              Math.random() * (-100 - -260 + 1)
+            ) + -260
           });
         }
 
         for (let i = 0; i < this.pipeGenerator.length; i++) {
           let p = this.pipeGenerator[i];
+
           p.x -= this.dx;
 
+          // Colisão com os canos
           if (
             bird.x + bird.radius > p.x &&
             bird.x - bird.radius < p.x + this.w &&
-            (bird.y - bird.radius < p.y + this.h || bird.y + bird.radius > p.y + this.h + this.gap)
+            (
+              bird.y - bird.radius < p.y + this.h ||
+              bird.y + bird.radius > p.y + this.h + this.gap
+            )
           ) {
             gameState.current = gameState.gameOver;
           }
 
-          if (p.x + this.w < bird.x - bird.radius && !p.passed) {
+          // Pontuação
+          if (
+            p.x + this.w < bird.x - bird.radius &&
+            !p.passed
+          ) {
             p.passed = true;
             score.current++;
           }
 
+          // Remover canos que saíram da tela
           if (p.x < -this.w) {
             this.pipeGenerator.shift();
           }
@@ -175,8 +271,21 @@ export default function Game() {
     const getReadyScreen = {
       render: function () {
         if (gameState.current === gameState.getReady) {
-          ctx.drawImage(getReadyImg, cvs.width / 2 - 90, 100, 180, 50);
-          ctx.drawImage(instructionsImg, cvs.width / 2 - 57, 200, 114, 98);
+          ctx.drawImage(
+            getReadyImg,
+            cvs.width / 2 - 90,
+            100,
+            180,
+            50
+          );
+
+          ctx.drawImage(
+            instructionsImg,
+            cvs.width / 2 - 57,
+            200,
+            114,
+            98
+          );
         }
       }
     };
@@ -186,14 +295,25 @@ export default function Game() {
       render: function () {
         if (gameState.current === gameState.play) {
           ctx.save();
+
           ctx.fillStyle = '#FFFFFF';
           ctx.strokeStyle = '#000000';
           ctx.lineWidth = 3;
           ctx.font = 'bold 36px sans-serif';
           ctx.textAlign = 'center';
-          
-          ctx.strokeText(score.current, cvs.width / 2, 50);
-          ctx.fillText(score.current, cvs.width / 2, 50);
+
+          ctx.strokeText(
+            score.current,
+            cvs.width / 2,
+            50
+          );
+
+          ctx.fillText(
+            score.current,
+            cvs.width / 2,
+            50
+          );
+
           ctx.restore();
         }
       }
@@ -205,7 +325,13 @@ export default function Game() {
       ground.position();
       pipes.position();
 
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.clearRect(
+        0,
+        0,
+        cvs.width,
+        cvs.height
+      );
+
       bg.render();
       pipes.render();
       ground.render();
@@ -214,6 +340,7 @@ export default function Game() {
       scoreDisplay.render();
 
       frame++;
+
       animationFrameId = requestAnimationFrame(loop);
     }
 
@@ -224,9 +351,11 @@ export default function Game() {
           gameState.current = gameState.play;
           bird.flap();
           break;
+
         case gameState.play:
           bird.flap();
           break;
+
         case gameState.gameOver:
           navigate('/ranking');
           break;
@@ -234,17 +363,24 @@ export default function Game() {
     };
 
     cvs.addEventListener('click', handleCanvasClick);
+
     loop();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       cvs.removeEventListener('click', handleCanvasClick);
     };
+
   }, [navigate]);
 
   return (
     <div className="game-container">
-      <canvas ref={canvasRef} id="game" width="300" height="500"></canvas>
+      <canvas
+        ref={canvasRef}
+        id="game"
+        width="300"
+        height="500"
+      ></canvas>
     </div>
   );
 }
