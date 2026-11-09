@@ -11,7 +11,9 @@ import birdMidSrc from '../assets/sprites/bird-midflap.png';
 import birdUpSrc from '../assets/sprites/bird-upflap.png';
 import birdDownSrc from '../assets/sprites/bird-downflap.png';
 import getReadyImgSrc from '../assets/sprites/get-ready.png';
-import instructionsImgSrc from '../assets/sprites/instrucoes.png';
+
+// Botão de pausa
+import pauseBtnImg from '../assets/sprites/icons/pause.png';
 
 // Importando os arquivos de áudio
 import wingSoundSrc from '../assets/sounds/wing.ogg';
@@ -22,6 +24,7 @@ import dieSoundSrc from '../assets/sounds/die.ogg';
 export default function Game() {
   const canvasRef = useRef(null);
   const audioInstancesRef = useRef([]);
+  const isPausedRef = useRef(false);
 
   const navigate = useNavigate();
 
@@ -29,6 +32,7 @@ export default function Game() {
   const { isMuted } = useAudio();
 
   const [isFadingIn, setIsFadingIn] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,9 +59,6 @@ export default function Game() {
 
     const getReadyImg = new Image();
     getReadyImg.src = getReadyImgSrc;
-
-    const instructionsImg = new Image();
-    instructionsImg.src = instructionsImgSrc;
 
     // Frames de animação do pássaro
     const birdImgs = [new Image(), new Image(), new Image()];
@@ -167,14 +168,12 @@ export default function Game() {
             gameState.current = gameState.gameOver;
           }
 
-          // Lógica de queda quando bater no cano
         } else if (gameState.current === gameState.gameOver) {
-          // Se o pássaro ainda não atingiu o chão, ele continua caindo
+          // O pássaro continua caindo após a colisão
           if (this.y + this.h / 2 < ground.y) {
             this.speed += this.gravity;
             this.y += this.speed;
 
-            // Controle da velocidade da rotação
             if (this.rotation < Math.PI / 2) {
               this.rotation += 0.1;
             } else {
@@ -182,7 +181,6 @@ export default function Game() {
             }
 
           } else {
-            // Quando finalmente encostar no chão
             this.y = ground.y - this.h / 2;
           }
         }
@@ -280,12 +278,9 @@ export default function Game() {
               bird.y + bird.radius > p.y + this.h + this.gap
             )
           ) {
-
-            // Toca o som de impacto
             hitSound.currentTime = 0;
             hitSound.play().catch(err => console.log(err));
 
-            // Toca o som de morte
             dieSound.currentTime = 0;
             dieSound.play().catch(err => console.log(err));
 
@@ -313,7 +308,6 @@ export default function Game() {
       render: function () {
         if (gameState.current === gameState.getReady) {
           ctx.drawImage(getReadyImg, cvs.width / 2 - 90, 100, 180, 50);
-          ctx.drawImage(instructionsImg, cvs.width / 2 - 57, 200, 114, 98);
         }
       }
     };
@@ -321,7 +315,10 @@ export default function Game() {
     // Renderização da pontuação
     const scoreDisplay = {
       render: function () {
-        if (gameState.current === gameState.play) {
+        if (
+          gameState.current === gameState.getReady ||
+          gameState.current === gameState.play
+        ) {
           ctx.save();
           ctx.fillStyle = '#FFFFFF';
           ctx.strokeStyle = '#000000';
@@ -329,8 +326,34 @@ export default function Game() {
           ctx.font = 'bold 36px sans-serif';
           ctx.textAlign = 'center';
 
-          ctx.strokeText(score.current, cvs.width / 2, 50);
-          ctx.fillText(score.current, cvs.width / 2, 50);
+          // Durante o Get Ready, o zero aparece acima do título
+          const scoreY = gameState.current === gameState.getReady ? 90 : 50;
+
+          ctx.strokeText(score.current, cvs.width / 2, scoreY);
+          ctx.fillText(score.current, cvs.width / 2, scoreY);
+
+          ctx.restore();
+        }
+      }
+    };
+
+    // Indicador de pausa
+    const pauseDisplay = {
+      render: function () {
+        if (isPausedRef.current) {
+          ctx.save();
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+          ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+          ctx.font = 'bold 28px sans-serif';
+          ctx.textAlign = 'center';
+
+          ctx.strokeText('PAUSADO', cvs.width / 2, cvs.height / 2);
+          ctx.fillText('PAUSADO', cvs.width / 2, cvs.height / 2);
 
           ctx.restore();
         }
@@ -339,9 +362,13 @@ export default function Game() {
 
     // Loop principal do jogo
     function loop() {
-      bird.update();
-      ground.position();
-      pipes.position();
+      if (!isPausedRef.current) {
+        bird.update();
+        ground.position();
+        pipes.position();
+
+        frame++;
+      }
 
       ctx.clearRect(0, 0, cvs.width, cvs.height);
 
@@ -351,14 +378,15 @@ export default function Game() {
       bird.render();
       getReadyScreen.render();
       scoreDisplay.render();
-
-      frame++;
+      pauseDisplay.render();
 
       animationFrameId = requestAnimationFrame(loop);
     }
 
     // Clique no canvas
     const handleCanvasClick = () => {
+      if (isPausedRef.current) return;
+
       switch (gameState.current) {
         case gameState.getReady:
           gameState.current = gameState.play;
@@ -370,7 +398,6 @@ export default function Game() {
           break;
 
         case gameState.gameOver:
-          // Impede que o usuário vá para o ranking antes do pássaro cair no chão
           if (bird.y + bird.h / 2 >= ground.y) {
             navigate('/ranking');
           }
@@ -404,21 +431,55 @@ export default function Game() {
     });
   }, [isMuted]);
 
+  // Controla o botão de pausa
+  const handlePause = () => {
+    const nextPausedState = !isPausedRef.current;
+
+    isPausedRef.current = nextPausedState;
+    setIsPaused(nextPausedState);
+
+    if (nextPausedState) {
+      audioInstancesRef.current.forEach((audio) => {
+        audio.pause();
+      });
+    }
+  };
+
   return (
     <div className="game-container relative flex justify-center items-center w-screen h-dvh bg-black">
-      <canvas
-        ref={canvasRef}
-        id="game"
-        width="300"
-        height="500"
-        className="shadow-2xl"
-      ></canvas>
 
+      <div className="relative">
+
+        <canvas
+          ref={canvasRef}
+          id="game"
+          width="300"
+          height="500"
+          className="shadow-2xl block"
+        ></canvas>
+
+        {/* BOTÃO DE PAUSA */}
+        <button
+          onClick={handlePause}
+          className="absolute top-3 left-3 z-40 w-15 h-15 bg-transparent border-none cursor-pointer p-0 hover:scale-110 active:scale-90 transition-transform"
+          aria-label={isPaused ? "Retomar jogo" : "Pausar jogo"}
+        >
+          <img
+            src={pauseBtnImg}
+            alt="Pausar"
+            className="w-full h-full object-contain"
+          />
+        </button>
+
+      </div>
+
+      {/* TRANSIÇÃO DE ENTRADA */}
       <div
         className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
           isFadingIn ? 'opacity-100' : 'opacity-0'
         }`}
       ></div>
+
     </div>
   );
 }
