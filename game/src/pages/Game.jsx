@@ -457,13 +457,42 @@ export default function Game() {
       }
     };
 
+    // Controle pelo teclado (barra de espaço)
+const handleKeyDown = (event) => {
+  if (event.code === 'Space') {
+    event.preventDefault();
+
+    if (isPausedRef.current) return;
+
+    switch (gameState.current) {
+      case gameState.getReady:
+        gameState.current = gameState.play;
+        bird.flap();
+        break;
+
+      case gameState.play:
+        bird.flap();
+        break;
+
+      case gameState.gameOver:
+        if (bird.y + bird.h / 2 >= ground.y) {
+          navigate('/ranking');
+        }
+        break;
+    }
+  }
+};
+
     cvs.addEventListener('click', handleCanvasClick);
+
+    window.addEventListener('keydown', handleKeyDown);
 
     loop();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       cvs.removeEventListener('click', handleCanvasClick);
+      window.removeEventListener('keydown', handleKeyDown);
 
       audioInstancesRef.current.forEach((audio) => {
         audio.pause();
