@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
@@ -11,6 +10,12 @@ import birdMidSrc from '../assets/sprites/bird-midflap.png';
 import birdUpSrc from '../assets/sprites/bird-upflap.png';
 import birdDownSrc from '../assets/sprites/bird-downflap.png';
 import getReadyImgSrc from '../assets/sprites/get-ready.png';
+import gameOverImgSrc from '../assets/sprites/game-over.png';
+import panelImgSrc from '../assets/sprites/panel.png'; // <-- IMPORTAÇÃO DO PAINEL
+
+// Sprites dos botões
+import playGameImgSrc from '../assets/sprites/play-game.png';
+import rankImgSrc from '../assets/sprites/rank.png';
 
 // Sprites dos números
 import number0Src from '../assets/sprites/numbers/0.png';
@@ -24,8 +29,9 @@ import number7Src from '../assets/sprites/numbers/7.png';
 import number8Src from '../assets/sprites/numbers/8.png';
 import number9Src from '../assets/sprites/numbers/9.png';
 
-// Botão de pausa
+// Ícones de controle
 import pauseBtnImg from '../assets/sprites/icons/pause.png';
+import playBtnImg from '../assets/sprites/icons/play.png';
 
 // Áudios
 import wingSoundSrc from '../assets/sounds/wing.ogg';
@@ -37,18 +43,25 @@ export default function Game() {
   const canvasRef = useRef(null);
   const audioInstancesRef = useRef([]);
   const isPausedRef = useRef(false);
+  
+  // Referência para comunicar o HTML com o loop do Canvas
+  const gameMethodsRef = useRef({});
 
   const navigate = useNavigate();
   const { isMuted } = useAudio();
 
   const [isFadingIn, setIsFadingIn] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Estados para controlar a UI de Game Over
+  const [isGameOver, setIsGameOver] = useState(false); // Esconde o botão de pause
+  const [showPanel, setShowPanel] = useState(false);   // Faz o painel descer
+  const [showGameOverUI, setShowGameOverUI] = useState(false); // Mostra os botões
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsFadingIn(false);
     }, 50);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -56,6 +69,10 @@ export default function Game() {
     const cvs = canvasRef.current;
     const ctx = cvs.getContext('2d');
     let animationFrameId;
+    
+    // Variáveis de controle para não disparar os eventos repetidas vezes por frame
+    let gameOverTriggered = false; 
+    let groundHitTriggered = false; 
 
     // Carregamento dos sprites
     const bgImg = new Image();
@@ -70,18 +87,13 @@ export default function Game() {
     const getReadyImg = new Image();
     getReadyImg.src = getReadyImgSrc;
 
+    const gameOverImg = new Image();
+    gameOverImg.src = gameOverImgSrc;
+
     // Sprites dos números
     const numberSpritesSrc = [
-      number0Src,
-      number1Src,
-      number2Src,
-      number3Src,
-      number4Src,
-      number5Src,
-      number6Src,
-      number7Src,
-      number8Src,
-      number9Src
+      number0Src, number1Src, number2Src, number3Src, number4Src,
+      number5Src, number6Src, number7Src, number8Src, number9Src
     ];
 
     const numberImgs = numberSpritesSrc.map((src) => {
@@ -90,84 +102,66 @@ export default function Game() {
       return img;
     });
 
-    // Frames do pássaro
     const birdImgs = [new Image(), new Image(), new Image()];
     birdImgs[0].src = birdDownSrc;
     birdImgs[1].src = birdMidSrc;
     birdImgs[2].src = birdUpSrc;
 
-    // Objetos de áudio
     const wingSound = new Audio(wingSoundSrc);
     const pointSound = new Audio(pointSoundSrc);
     const hitSound = new Audio(hitSoundSrc);
     const dieSound = new Audio(dieSoundSrc);
 
-    audioInstancesRef.current = [
-      wingSound,
-      pointSound,
-      hitSound,
-      dieSound
-    ];
-
-    audioInstancesRef.current.forEach((audio) => {
-      audio.muted = isMuted;
-    });
+    audioInstancesRef.current = [wingSound, pointSound, hitSound, dieSound];
+    audioInstancesRef.current.forEach((audio) => { audio.muted = isMuted; });
 
     let frame = 0;
     const score = { current: 0 };
 
-    const gameState = {
-      current: 0,
-      getReady: 0,
-      play: 1,
-      gameOver: 2
+    const gameState = { current: 0, getReady: 0, play: 1, gameOver: 2 };
+
+    // FUNÇÃO DE RESET DISPONIBILIZADA PARA OS BOTÕES HTML
+    const resetGame = () => {
+      if (bird.y + bird.h / 2 < ground.y) return;
+      
+      pipes.pipeGenerator = [];
+      score.current = 0;
+      bird.speed = 0;
+      bird.y = 180;
+      bird.rotation = 0;
+      gameState.current = gameState.getReady;
+      
+      gameOverScreen.alpha = 0;
+      gameOverTriggered = false;
+      groundHitTriggered = false;
+      
+      // Reseta a interface
+      setIsGameOver(false);
+      setShowPanel(false);
+      setShowGameOverUI(false);
     };
+
+    gameMethodsRef.current.resetGame = resetGame;
+    gameMethodsRef.current.canProceed = () => (bird.y + bird.h / 2 >= ground.y);
 
     // Pássaro
     const bird = {
-      x: 60,
-      y: 180,
-      w: 34,
-      h: 24,
-      radius: 12,
-
-      frameIndex: 0,
-
-      speed: 0,
-      gravity: 0.25,
-      jump: 4.6,
-
-      rotation: 0,
-
+      x: 60, y: 180, w: 34, h: 24, radius: 12,
+      frameIndex: 0, speed: 0, gravity: 0.25, jump: 4.6, rotation: 0,
       render: function () {
         const currentBirdImg = birdImgs[this.frameIndex];
-
         if (!currentBirdImg.complete || !currentBirdImg.naturalWidth) return;
-
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
-
-        ctx.drawImage(
-          currentBirdImg,
-          -this.w / 2,
-          -this.h / 2,
-          this.w,
-          this.h
-        );
-
+        ctx.drawImage(currentBirdImg, -this.w / 2, -this.h / 2, this.w, this.h);
         ctx.restore();
       },
-
       flap: function () {
         this.speed = -this.jump;
-
         wingSound.currentTime = 0;
-        wingSound.play().catch((err) => {
-          console.log('Áudio bloqueado ou não carregado:', err);
-        });
+        wingSound.play().catch(err => console.log(err));
       },
-
       update: function () {
         if (gameState.current !== gameState.gameOver && frame % 5 === 0) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
@@ -176,85 +170,72 @@ export default function Game() {
         if (gameState.current === gameState.getReady) {
           this.y = 180 + Math.sin(frame / 10) * 5;
           this.rotation += (0 - this.rotation) * 0.15;
-
         } else if (gameState.current === gameState.play) {
           this.speed += this.gravity;
           this.y += this.speed;
 
-          const targetRotation = Math.max(
-            -0.45,
-            Math.min(1.2, this.speed * 0.12)
-          );
+          const targetRotation = Math.max(-0.45, Math.min(1.2, this.speed * 0.12));
+          this.rotation += (targetRotation - this.rotation) * 0.18;
 
-          this.rotation += (
-            targetRotation - this.rotation
-          ) * 0.18;
-
-          // Colisão com o chão
+          // Colisão direto com o chão durante a jogatina
           if (this.y + this.h / 2 >= ground.y) {
             this.y = ground.y - this.h / 2;
-
             hitSound.currentTime = 0;
             hitSound.play().catch(err => console.log(err));
 
             gameState.current = gameState.gameOver;
+            
+            // 1. Esconde botão pause imediatamente
+            if (!gameOverTriggered) {
+              gameOverTriggered = true;
+              setIsGameOver(true);
+            }
+            // 2. Tocou no chão -> Desce painel
+            if (!groundHitTriggered) {
+              groundHitTriggered = true;
+              setShowPanel(true);
+              setTimeout(() => setShowGameOverUI(true), 500); // Mostra botões 500ms depois
+            }
           }
-
         } else if (gameState.current === gameState.gameOver) {
-          // O pássaro continua caindo após a colisão
+          // O pássaro está caindo após bater no cano
           if (this.y + this.h / 2 < ground.y) {
             this.speed += this.gravity;
             this.y += this.speed;
-
-            if (this.rotation < Math.PI / 2) {
-              this.rotation += 0.1;
-            } else {
-              this.rotation = Math.PI / 2;
-            }
-
+            if (this.rotation < Math.PI / 2) this.rotation += 0.1;
+            else this.rotation = Math.PI / 2;
           } else {
+            // Terminou de cair e esmagou o bico no chão
             this.y = ground.y - this.h / 2;
+            
+            if (!groundHitTriggered) {
+              groundHitTriggered = true;
+              setShowPanel(true); // Desce o painel de cima para baixo
+              setTimeout(() => setShowGameOverUI(true), 500); // Mostra os botões 500ms depois
+            }
           }
         }
       }
     };
 
-    // Fundo
+    // Fundo e Chão
     const bg = {
       render: function () {
-        if (bgImg.complete && bgImg.naturalWidth) {
-          ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
-        }
+        if (bgImg.complete && bgImg.naturalWidth) ctx.drawImage(bgImg, 0, 0, cvs.width, cvs.height);
       }
     };
 
-    // Chão
     const ground = {
-      x: 0,
-      w: cvs.width,
-      dx: 2,
-
-      get h() {
-        if (!baseImg.naturalWidth) return 112;
-        return this.w * (baseImg.naturalHeight / baseImg.naturalWidth);
-      },
-
-      get y() {
-        return cvs.height - this.h;
-      },
-
+      x: 0, w: cvs.width, dx: 2,
+      get h() { return !baseImg.naturalWidth ? 112 : this.w * (baseImg.naturalHeight / baseImg.naturalWidth); },
+      get y() { return cvs.height - this.h; },
       render: function () {
         if (!baseImg.complete || !baseImg.naturalWidth) return;
-
         ctx.drawImage(baseImg, this.x, this.y, this.w, this.h);
         ctx.drawImage(baseImg, this.x + this.w, this.y, this.w, this.h);
       },
-
       position: function () {
-        if (
-          gameState.current === gameState.play ||
-          gameState.current === gameState.getReady
-        ) {
+        if (gameState.current === gameState.play || gameState.current === gameState.getReady) {
           this.x = (this.x - this.dx) % this.w;
         }
       }
@@ -262,23 +243,15 @@ export default function Game() {
 
     // Canos
     const pipes = {
-      w: 52,
-      h: 320,
-      gap: 100,
-      dx: 2,
-      pipeGenerator: [],
-
+      w: 52, h: 320, gap: 100, dx: 2, pipeGenerator: [],
       render: function () {
         if (!pipeImg.complete || !pipeImg.naturalWidth) return;
-
         for (let i = 0; i < this.pipeGenerator.length; i++) {
           let p = this.pipeGenerator[i];
-
           let topPipeY = p.y;
           let bottomPipeY = p.y + this.h + this.gap;
 
           ctx.drawImage(pipeImg, p.x, bottomPipeY, this.w, this.h);
-
           ctx.save();
           ctx.translate(p.x + this.w / 2, topPipeY + this.h / 2);
           ctx.scale(1, -1);
@@ -286,7 +259,6 @@ export default function Game() {
           ctx.restore();
         }
       },
-
       position: function () {
         if (gameState.current !== gameState.play) return;
 
@@ -299,237 +271,150 @@ export default function Game() {
 
         for (let i = 0; i < this.pipeGenerator.length; i++) {
           let p = this.pipeGenerator[i];
-
           p.x -= this.dx;
 
           // Colisão com os canos
           if (
-            bird.x + bird.radius > p.x &&
-            bird.x - bird.radius < p.x + this.w &&
-            (
-              bird.y - bird.radius < p.y + this.h ||
-              bird.y + bird.radius > p.y + this.h + this.gap
-            )
+            bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + this.w &&
+            (bird.y - bird.radius < p.y + this.h || bird.y + bird.radius > p.y + this.h + this.gap)
           ) {
             hitSound.currentTime = 0;
             hitSound.play().catch(err => console.log(err));
-
             dieSound.currentTime = 0;
             dieSound.play().catch(err => console.log(err));
 
             gameState.current = gameState.gameOver;
+            
+            // Avisa o React que morreu (Esconde o botão de pause imediatamente)
+            if (!gameOverTriggered) {
+              gameOverTriggered = true;
+              setIsGameOver(true);
+            }
           }
 
-          // Pontuação
           if (p.x + this.w < bird.x - bird.radius && !p.passed) {
             p.passed = true;
             score.current++;
-
             pointSound.currentTime = 0;
             pointSound.play().catch(err => console.log(err));
           }
 
-          if (p.x < -this.w) {
-            this.pipeGenerator.shift();
-          }
+          if (p.x < -this.w) this.pipeGenerator.shift();
         }
       }
     };
 
-    // Tela Get Ready
     const getReadyScreen = {
       render: function () {
-        if (
-          gameState.current === gameState.getReady &&
-          getReadyImg.complete &&
-          getReadyImg.naturalWidth
-        ) {
+        if (gameState.current === gameState.getReady && getReadyImg.complete && getReadyImg.naturalWidth) {
           ctx.drawImage(getReadyImg, cvs.width / 2 - 90, 100, 180, 50);
         }
       }
     };
 
-    // Pontuação com sprites PNG
-    const scoreDisplay = {
+    const gameOverScreen = {
+      alpha: 0, y: 120, // Texto de Game Over fica no topo
       render: function () {
-        if (
-          gameState.current !== gameState.getReady &&
-          gameState.current !== gameState.play
-        ) {
-          return;
-        }
+        if (gameState.current === gameState.gameOver) {
+          if (this.alpha < 1) this.alpha += 0.05;
 
-        const scoreText = score.current.toString();
-
-        const digitWidth = 24;
-        const digitHeight = 36;
-        const spacing = 2;
-
-        const totalWidth =
-          scoreText.length * digitWidth +
-          (scoreText.length - 1) * spacing;
-
-        const startX = (cvs.width - totalWidth) / 2;
-        const scoreY = 17;
-
-        for (let i = 0; i < scoreText.length; i++) {
-          const digit = Number(scoreText[i]);
-          const numberImg = numberImgs[digit];
-
-          if (numberImg.complete && numberImg.naturalWidth > 0) {
-            ctx.drawImage(
-              numberImg,
-              startX + i * (digitWidth + spacing),
-              scoreY,
-              digitWidth,
-              digitHeight
-            );
+          if (gameOverImg.complete && gameOverImg.naturalWidth) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(this.alpha, 1);
+            ctx.drawImage(gameOverImg, cvs.width / 2 - 96, this.y, 192, 42);
+            ctx.restore();
           }
         }
       }
     };
 
-    // Indicador de pausa
-    const pauseDisplay = {
+    const scoreDisplay = {
       render: function () {
-        if (isPausedRef.current) {
-          ctx.save();
+        if (gameState.current !== gameState.getReady && gameState.current !== gameState.play) return;
+        const scoreText = score.current.toString();
+        const digitWidth = 24, digitHeight = 36, spacing = 2;
+        const totalWidth = scoreText.length * digitWidth + (scoreText.length - 1) * spacing;
+        const startX = (cvs.width - totalWidth) / 2;
 
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-          ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-          ctx.fillStyle = '#FFFFFF';
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 3;
-          ctx.font = 'bold 28px sans-serif';
-          ctx.textAlign = 'center';
-
-          ctx.strokeText('PAUSADO', cvs.width / 2, cvs.height / 2);
-          ctx.fillText('PAUSADO', cvs.width / 2, cvs.height / 2);
-
-          ctx.restore();
+        for (let i = 0; i < scoreText.length; i++) {
+          const numberImg = numberImgs[Number(scoreText[i])];
+          if (numberImg.complete && numberImg.naturalWidth > 0) {
+            ctx.drawImage(numberImg, startX + i * (digitWidth + spacing), 17, digitWidth, digitHeight);
+          }
         }
       }
     };
 
-    // Loop principal
     function loop() {
       if (!isPausedRef.current) {
         bird.update();
         ground.position();
         pipes.position();
-
         frame++;
       }
 
       ctx.clearRect(0, 0, cvs.width, cvs.height);
-
       bg.render();
       pipes.render();
       ground.render();
       bird.render();
       getReadyScreen.render();
       scoreDisplay.render();
-      pauseDisplay.render();
+      gameOverScreen.render();
 
       animationFrameId = requestAnimationFrame(loop);
     }
 
-    // Clique no canvas
     const handleCanvasClick = () => {
       if (isPausedRef.current) return;
-
-      switch (gameState.current) {
-        case gameState.getReady:
-          gameState.current = gameState.play;
-          bird.flap();
-          break;
-
-        case gameState.play:
-          bird.flap();
-          break;
-
-        case gameState.gameOver:
-          if (bird.y + bird.h / 2 >= ground.y) {
-            navigate('/ranking');
-          }
-          break;
+      if (gameState.current === gameState.getReady || gameState.current === gameState.play) {
+        gameState.current = gameState.play;
+        bird.flap();
       }
     };
 
-    // Controle pelo teclado (barra de espaço)
-const handleKeyDown = (event) => {
-  if (event.code === 'Space') {
-    event.preventDefault();
+    const handleKeyDown = (event) => {
+      if (event.code === 'Space') {
+        event.preventDefault();
+        if (isPausedRef.current) return;
 
-    if (isPausedRef.current) return;
-
-    switch (gameState.current) {
-      case gameState.getReady:
-        gameState.current = gameState.play;
-        bird.flap();
-        break;
-
-      case gameState.play:
-        bird.flap();
-        break;
-
-      case gameState.gameOver:
-        if (bird.y + bird.h / 2 >= ground.y) {
-          navigate('/ranking');
+        if (gameState.current === gameState.getReady || gameState.current === gameState.play) {
+          gameState.current = gameState.play;
+          bird.flap();
+        } else if (gameState.current === gameState.gameOver) {
+          resetGame();
         }
-        break;
-    }
-  }
-};
+      }
+    };
 
     cvs.addEventListener('click', handleCanvasClick);
-
     window.addEventListener('keydown', handleKeyDown);
-
     loop();
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       cvs.removeEventListener('click', handleCanvasClick);
       window.removeEventListener('keydown', handleKeyDown);
-
-      audioInstancesRef.current.forEach((audio) => {
-        audio.pause();
-        audio.currentTime = 0;
-      });
-
+      audioInstancesRef.current.forEach(audio => { audio.pause(); audio.currentTime = 0; });
       audioInstancesRef.current = [];
     };
-
   }, [navigate]);
 
-  // Atualiza o estado dos áudios quando o usuário alternar o som
   useEffect(() => {
-    audioInstancesRef.current.forEach((audio) => {
-      audio.muted = isMuted;
-    });
+    audioInstancesRef.current.forEach(audio => { audio.muted = isMuted; });
   }, [isMuted]);
 
-  // Controle do botão de pausa
   const handlePause = () => {
     const nextPausedState = !isPausedRef.current;
-
     isPausedRef.current = nextPausedState;
     setIsPaused(nextPausedState);
-
-    if (nextPausedState) {
-      audioInstancesRef.current.forEach((audio) => {
-        audio.pause();
-      });
-    }
+    if (nextPausedState) audioInstancesRef.current.forEach(audio => audio.pause());
   };
 
   return (
-    <div className="game-container relative flex justify-center items-center w-screen h-dvh bg-black">
-
-      <div className="relative">
-
+    <div className="game-container relative flex justify-center items-center w-screen h-dvh bg-black overflow-hidden">
+      <div className="relative overflow-hidden">
+        
         <canvas
           ref={canvasRef}
           id="game"
@@ -538,28 +423,63 @@ const handleKeyDown = (event) => {
           className="shadow-2xl block"
         ></canvas>
 
-        {/* BOTÃO DE PAUSA */}
+        {/* BOTÃO DE PAUSA/PLAY - Oculta-se com opacidade quando isGameOver for true */}
         <button
           onClick={handlePause}
-          className="absolute top-3 left-3 z-40 w-15 h-15 bg-transparent border-none cursor-pointer p-0 hover:scale-110 active:scale-90 transition-transform"
+          className={`absolute top-3 left-3 z-40 w-15 h-15 bg-transparent border-none cursor-pointer p-0 hover:scale-110 active:scale-90 transition-all duration-200 ${
+            isGameOver ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
           aria-label={isPaused ? "Retomar jogo" : "Pausar jogo"}
         >
           <img
-            src={pauseBtnImg}
-            alt="Pausar"
+            src={isPaused ? playBtnImg : pauseBtnImg}
+            alt={isPaused ? "Retomar" : "Pausar"}
             className="w-full h-full object-contain"
           />
         </button>
 
+        {/* OVERLAY DO PAINEL (Desce de cima para baixo quando o pássaro toca o chão) */}
+        <div
+          className={`absolute left-0 w-full flex justify-center z-30 transition-transform duration-500 ease-out ${
+            showPanel ? 'translate-y-0' : '-translate-y-[500px]' // Inicia 500px pra cima (escondido) e desce até a posição zero
+          }`}
+          style={{ top: '280px' }} // Altura central do painel
+        >
+          <img src={panelImgSrc} alt="Painel de Score" className="w-[320px] h-auto block drop-shadow-md" />
+        </div>
+
+        {/* OVERLAY DOS BOTÕES DE GAME OVER (Aparece 500ms DEPOIS do painel descer) */}
+        <div
+          className={`absolute left-0 w-full flex justify-center gap-4 px-2 z-40 transition-opacity duration-300 ${
+            showGameOverUI ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          style={{ top: '508px' }} // Altura próxima ao chão
+        >
+          <button
+            onClick={() => gameMethodsRef.current.resetGame?.()}
+            className="w-[115px] hover:scale-105 active:scale-95 transition-transform outline-none bg-transparent border-none p-0 flex justify-center cursor-pointer drop-shadow-md"
+          >
+            <img src={playGameImgSrc} alt="Iniciar Jogo" className="w-full h-auto block" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (gameMethodsRef.current.canProceed?.()) navigate('/ranking');
+            }}
+            className="w-[115px] hover:scale-105 active:scale-95 transition-transform outline-none bg-transparent border-none p-0 flex justify-center cursor-pointer drop-shadow-md"
+          >
+            <img src={rankImgSrc} alt="Ver Ranking" className="w-full h-auto block" />
+          </button>
+        </div>
+
       </div>
 
-      {/* TRANSIÇÃO DE ENTRADA */}
+      {/* TRANSIÇÃO DE ENTRADA DO JOGO */}
       <div
         className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
           isFadingIn ? 'opacity-100' : 'opacity-0'
         }`}
       ></div>
-
     </div>
   );
 }
