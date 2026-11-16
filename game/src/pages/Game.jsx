@@ -11,6 +11,7 @@ import birdMidSrc from '../assets/sprites/bird-midflap.png';
 import birdUpSrc from '../assets/sprites/bird-upflap.png';
 import birdDownSrc from '../assets/sprites/bird-downflap.png';
 import getReadyImgSrc from '../assets/sprites/get-ready.png';
+import messageImgSrc from '../assets/sprites/message.png';
 import gameOverImgSrc from '../assets/sprites/game-over.png';
 import panelImgSrc from '../assets/sprites/panel.png';
 
@@ -81,21 +82,21 @@ export default function Game() {
   const [finalScore, setFinalScore] = useState(0);
 
   // Selecionar medalha de acordo com a pontuação
-const getMedal = () => {
-  if (finalScore >= 100) {
-    return hundredPointsMedal;
-  }
+  const getMedal = () => {
+    if (finalScore >= 100) {
+      return hundredPointsMedal;
+    }
 
-  if (finalScore >= 50) {
-    return goldMedal;
-  }
+    if (finalScore >= 50) {
+      return goldMedal;
+    }
 
-  if (finalScore >= 20) {
-    return silverMedal;
-  }
+    if (finalScore >= 20) {
+      return silverMedal;
+    }
 
-  return bronzeMedal;
-};
+    return bronzeMedal;
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -126,6 +127,9 @@ const getMedal = () => {
 
     const getReadyImg = new Image();
     getReadyImg.src = getReadyImgSrc;
+
+    const messageImg = new Image();
+    messageImg.src = messageImgSrc;
 
     const gameOverImg = new Image();
     gameOverImg.src = gameOverImgSrc;
@@ -449,31 +453,31 @@ const getMedal = () => {
             }
           }
 
-// Contabilizar canos ultrapassados
-if (
-  p.x + this.w < bird.x - bird.radius &&
-  !p.passed
-) {
-  p.passed = true;
+          // Contabilizar canos ultrapassados
+          if (
+            p.x + this.w < bird.x - bird.radius &&
+            !p.passed
+          ) {
+            p.passed = true;
 
-  score.current++;
+            score.current++;
 
-  // Atualizar pontuação exibida no painel
-  setFinalScore(score.current);
+            // Atualizar pontuação exibida no painel
+            setFinalScore(score.current);
 
-  pointSound.currentTime = 0;
-  pointSound.play().catch(err => console.log(err));
+            pointSound.currentTime = 0;
+            pointSound.play().catch(err => console.log(err));
 
-  // VITÓRIA: atingir 100 pontos
-  if (score.current >= 100) {
-    gameState.current = gameState.gameOver;
+            // Vitória ao atingir 100 pontos
+            if (score.current >= 100) {
+              gameState.current = gameState.gameOver;
 
-    if (!gameOverTriggered) {
-      gameOverTriggered = true;
-      setIsGameOver(true);
-    }
-  }
-}
+              if (!gameOverTriggered) {
+                gameOverTriggered = true;
+                setIsGameOver(true);
+              }
+            }
+          }
 
           if (p.x < -this.w) {
             this.pipeGenerator.shift();
@@ -485,18 +489,29 @@ if (
     // Tela Get Ready
     const getReadyScreen = {
       render: function () {
-        if (
-          gameState.current === gameState.getReady &&
-          getReadyImg.complete &&
-          getReadyImg.naturalWidth
-        ) {
-          ctx.drawImage(
-            getReadyImg,
-            cvs.width / 2 - 90,
-            100,
-            180,
-            50
-          );
+        if (gameState.current === gameState.getReady) {
+
+          // Imagem GET READY
+          if (getReadyImg.complete && getReadyImg.naturalWidth) {
+            ctx.drawImage(
+              getReadyImg,
+              cvs.width / 2 - 90,
+              100,
+              180,
+              50
+            );
+          }
+
+          // Imagem MESSAGE - posição fixa
+          if (messageImg.complete && messageImg.naturalWidth) {
+            ctx.drawImage(
+              messageImg,
+              105,
+              165,
+              100,
+              120
+            );
+          }
         }
       }
     };
@@ -748,14 +763,14 @@ if (
             />
 
             {/* MEDALHA DE ACORDO COM A PONTUAÇÃO */}
-<img
-  src={getMedal()}
-  alt="Medalha conquistada"
-  className="absolute left-[12%] top-[38%] w-[20%] h-auto object-contain"
-/>
+            <img
+              src={getMedal()}
+              alt="Medalha conquistada"
+              className="absolute left-[12%] top-[38%] w-[20%] h-auto object-contain"
+            />
 
             {/* PONTUAÇÃO ABAIXO DE SCORE */}
-            <div className="absolute top-[31%] right-[12%] flex items-center justify-end gap-[0px]">
+            <div className="absolute top-[31%] right-[12%] flex items-center justify-end gap-0">
 
               {finalScore.toString().split('').map((digit, index) => (
                 <img
@@ -771,7 +786,7 @@ if (
           </div>
         </div>
 
-        {/* BOTÕES DE GAME OVER - MESMO ESTILO DA HOME */}
+        {/* BOTÕES DE GAME OVER */}
         <div
           className={`absolute bottom-[23%] left-0 flex gap-5 w-full justify-center px-4 z-40 transition-opacity duration-300 ${
             showGameOverUI
