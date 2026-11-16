@@ -1,113 +1,238 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 
-// Importações dos sprites
-import bgDay from '../assets/sprites/background-day.png';
+// Sprites
+import bgImg from '../assets/sprites/background-day.png';
 import baseImg from '../assets/sprites/base.png';
-import panelRanking from '../assets/sprites/panel-ranking.png';
+import panelRankingImg from '../assets/sprites/panel-ranking.png';
+import rankingImg from '../assets/sprites/ranking.png';
+import playBtnImg from '../assets/sprites/play-game.png';
 
-// Ícones do topo
-import menuBtnImg from '../assets/sprites/icons/back.png';
-
-
-// Importação do som
+// Som
 import swooshSound from '../assets/sounds/swoosh.ogg';
 
 export default function Ranking() {
-
   const navigate = useNavigate();
+  const { isMuted } = useAudio();
 
-  // Controle global do áudio
-  const { isMuted, toggleMute } = useAudio();
+  const [isFading, setIsFading] = useState(false);
 
+  // Recuperar pontuações salvas
+  const savedScores = JSON.parse(
+    localStorage.getItem('ranking') || '[]'
+  );
+
+  // Ordenar pontuações da maior para a menor
+  const scores = [...savedScores].sort(
+    (a, b) => Number(b.score) - Number(a.score)
+  );
+
+  // Calcular recorde
+  const bestScore = scores.length > 0
+    ? Math.max(...scores.map(item => Number(item.score) || 0))
+    : 0;
+
+  // Iniciar jogo
+  const handlePlayClick = () => {
+    if (isFading) return;
+
+    if (!isMuted) {
+      const audio = new Audio(swooshSound);
+      audio.play();
+    }
+
+    setIsFading(true);
+
+    setTimeout(() => {
+      navigate('/game');
+    }, 500);
+  };
 
   return (
     <div className="flex justify-center items-center w-screen h-dvh bg-black overflow-hidden select-none">
 
-      {/* ESTILOS CSS PARA AS ANIMAÇÕES DA HOME */}
+      {/* ESTILOS DAS ANIMAÇÕES */}
       <style>
         {`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-12px); }
-          }
-
-          .animate-float {
-            animation: float 0.8s ease-in-out infinite;
-          }
-
           @keyframes scrollGround {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-50%); }
+            0% {
+              transform: translateX(0%);
+            }
+
+            100% {
+              transform: translateX(-50%);
+            }
           }
 
           .animate-scroll {
             animation: scrollGround 2.7s linear infinite;
           }
+
+          /* Personalização da barra de rolagem */
+          .ranking-scroll::-webkit-scrollbar {
+            width: 5px;
+          }
+
+          .ranking-scroll::-webkit-scrollbar-track {
+            background: rgba(139, 84, 46, 0.15);
+            border-radius: 10px;
+          }
+
+          .ranking-scroll::-webkit-scrollbar-thumb {
+            background: #a77a42;
+            border-radius: 10px;
+          }
+
+          .ranking-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #a77a42 transparent;
+          }
         `}
       </style>
 
-      {/* CONTAINER PRINCIPAL DO JOGO */}
+      {/* CONTAINER PRINCIPAL */}
       <div
         className="relative flex flex-col overflow-hidden shadow-2xl box-border"
         style={{
           width: 'min(100vw, 60dvh)',
           height: 'min(100dvh, 166.6667vw)',
           aspectRatio: '3 / 5',
-          backgroundImage: `url(${bgDay})`,
+          backgroundImage: `url(${bgImg})`,
           backgroundSize: '100% 100%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}
       >
 
-        {/* BOTÕES SUPERIORES */}
-        <div
-          className="w-full pt-12 flex justify-between items-center z-30 shrink-0 box-border"
-          style={{
-            paddingLeft: '6px',
-            paddingRight: '6px',
-            paddingTop: '6px'
-          }}
-        >
-
-          
-
-          {/* AJUDA */}
-          <div className="relative flex justify-end items-center z-40 w-12 h-12">
-
-        
-
-            {/* IMAGEM DE INSTRUÇÕES */}
-            <img
-              src={instrucoesImg}
-              alt="Instruções"
-              className={`absolute top-0 right-0 w-52 sm:w-60 max-w-[80vw] h-auto object-contain drop-shadow-md transition-all duration-500 ease-out ${
-                showHelp
-                  ? 'translate-x-0 opacity-100'
-                  : 'translate-x-[110%] opacity-0 pointer-events-none'
-              }`}
-            />
-
-          </div>
-        </div>
-
         {/* ÁREA CENTRAL */}
         <div className="flex-1 min-h-0 flex flex-col items-center relative z-10 w-full">
 
+          {/* TÍTULO RANKING */}
+          <div className="absolute top-[12%] flex justify-center items-center w-full px-4">
 
-        </div>
+            <img
+              src={rankingImg}
+              alt="Ranking"
+              className="w-[230px] sm:w-[260px] h-auto object-contain drop-shadow-md"
+            />
 
-        {/* CHÃO CORRENDO */}
-        <div className="w-full shrink-0 z-10 overflow-hidden">
-          <div className="flex w-[200%] animate-scroll">
-            <img src={baseImg} alt="" className="block w-1/2 h-auto" />
-            <img src={baseImg} alt="" className="block w-1/2 h-auto" />
           </div>
+
+          {/* PAINEL DE RANKING */}
+          <div
+            className="absolute top-[27%] w-[85%]"
+            style={{
+              aspectRatio: '230 / 200',
+              backgroundImage: `url(${panelRankingImg})`,
+              backgroundSize: '100% 100%',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          >
+
+            {/* CONTEÚDO DO PAINEL */}
+            <div className="absolute inset-0 flex flex-col px-[9%] pt-[16%] pb-[9%]">
+
+              {/* TÍTULO DA LISTA */}
+              <h2 className="text-center text-[#70401f] font-bold text-xs sm:text-sm mb-2 shrink-0">
+                MELHORES PONTUAÇÕES
+              </h2>
+
+              {/* LISTA DE PONTUAÇÕES */}
+              <div className="flex-1 min-h-0 overflow-y-auto ranking-scroll">
+
+                {scores.length > 0 ? (
+
+                  scores.map((item, index) => (
+
+                    <div
+                      key={index}
+                      className="flex justify-between items-center px-2 py-1 border-b border-[#b9a76a]/40"
+                    >
+
+                      <span className="text-[#70401f] font-bold text-xs sm:text-sm truncate">
+                        {index + 1}　{item.name || 'Jogador'}
+                      </span>
+
+                      <span className="text-[#70401f] font-bold text-xs sm:text-sm ml-2">
+                        {item.score}
+                      </span>
+
+                    </div>
+
+                  ))
+
+                ) : (
+
+                  <div className="flex justify-center items-center h-full">
+                    <p className="text-[#70401f] font-bold text-center text-xs sm:text-sm">
+                      Nenhuma pontuação ainda!
+                    </p>
+                  </div>
+
+                )}
+
+              </div>
+
+              {/* RECORDE PESSOAL */}
+              <div className="text-center text-[#80502c] font-bold text-xs mt-2 shrink-0">
+                Seu recorde: {bestScore}
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* BOTÃO PLAY */}
+          <div className="absolute bottom-[7%] flex justify-center w-full px-4">
+
+            <button
+              onClick={handlePlayClick}
+              disabled={isFading}
+              className="w-[125px] sm:w-[135px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center bg-transparent border-none cursor-pointer"
+            >
+
+              <img
+                src={playBtnImg}
+                alt="Jogar novamente"
+                className="w-full h-auto"
+              />
+
+            </button>
+
+          </div>
+
         </div>
+
+        {/* CHÃO ANIMADO */}
+        <div className="w-full shrink-0 z-10 overflow-hidden">
+
+          <div className="flex w-[200%] animate-scroll">
+
+            <img
+              src={baseImg}
+              alt=""
+              className="block w-1/2 h-auto"
+            />
+
+            <img
+              src={baseImg}
+              alt=""
+              className="block w-1/2 h-auto"
+            />
+
+          </div>
+
+        </div>
+
+        {/* TRANSIÇÃO ESCURA */}
+        <div
+          className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
+            isFading ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
 
       </div>
     </div>
