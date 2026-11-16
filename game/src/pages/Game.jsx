@@ -30,6 +30,12 @@ import number7Src from '../assets/sprites/numbers/7.png';
 import number8Src from '../assets/sprites/numbers/8.png';
 import number9Src from '../assets/sprites/numbers/9.png';
 
+// Sprites das medalhas
+import bronzeMedal from '../assets/sprites/medals/bronze-medal.png';
+import silverMedal from '../assets/sprites/medals/silver-medal.png';
+import goldMedal from '../assets/sprites/medals/gold-medal.png';
+import hundredPointsMedal from '../assets/sprites/medals/100-points-medal.png';
+
 // Lista dos sprites dos números
 const numberSprites = [
   number0Src,
@@ -73,6 +79,23 @@ export default function Game() {
 
   // Pontuação final exibida no painel
   const [finalScore, setFinalScore] = useState(0);
+
+  // Selecionar medalha de acordo com a pontuação
+const getMedal = () => {
+  if (finalScore >= 100) {
+    return hundredPointsMedal;
+  }
+
+  if (finalScore >= 50) {
+    return goldMedal;
+  }
+
+  if (finalScore >= 20) {
+    return silverMedal;
+  }
+
+  return bronzeMedal;
+};
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -426,21 +449,31 @@ export default function Game() {
             }
           }
 
-          // Contabilizar canos ultrapassados
-          if (
-            p.x + this.w < bird.x - bird.radius &&
-            !p.passed
-          ) {
-            p.passed = true;
+// Contabilizar canos ultrapassados
+if (
+  p.x + this.w < bird.x - bird.radius &&
+  !p.passed
+) {
+  p.passed = true;
 
-            score.current++;
+  score.current++;
 
-            // Atualizar pontuação exibida no painel
-            setFinalScore(score.current);
+  // Atualizar pontuação exibida no painel
+  setFinalScore(score.current);
 
-            pointSound.currentTime = 0;
-            pointSound.play().catch(err => console.log(err));
-          }
+  pointSound.currentTime = 0;
+  pointSound.play().catch(err => console.log(err));
+
+  // VITÓRIA: atingir 100 pontos
+  if (score.current >= 100) {
+    gameState.current = gameState.gameOver;
+
+    if (!gameOverTriggered) {
+      gameOverTriggered = true;
+      setIsGameOver(true);
+    }
+  }
+}
 
           if (p.x < -this.w) {
             this.pipeGenerator.shift();
@@ -713,6 +746,13 @@ export default function Game() {
               alt="Painel de Score"
               className="w-full h-auto block drop-shadow-md"
             />
+
+            {/* MEDALHA DE ACORDO COM A PONTUAÇÃO */}
+<img
+  src={getMedal()}
+  alt="Medalha conquistada"
+  className="absolute left-[12%] top-[38%] w-[20%] h-auto object-contain"
+/>
 
             {/* PONTUAÇÃO ABAIXO DE SCORE */}
             <div className="absolute top-[31%] right-[12%] flex items-center justify-end gap-[0px]">
