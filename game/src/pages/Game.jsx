@@ -30,6 +30,20 @@ import number7Src from '../assets/sprites/numbers/7.png';
 import number8Src from '../assets/sprites/numbers/8.png';
 import number9Src from '../assets/sprites/numbers/9.png';
 
+// Lista dos sprites dos números
+const numberSprites = [
+  number0Src,
+  number1Src,
+  number2Src,
+  number3Src,
+  number4Src,
+  number5Src,
+  number6Src,
+  number7Src,
+  number8Src,
+  number9Src
+];
+
 // Ícones de controle
 import pauseBtnImg from '../assets/sprites/icons/pause.png';
 import playBtnImg from '../assets/sprites/icons/play.png';
@@ -56,6 +70,9 @@ export default function Game() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [showPanel, setShowPanel] = useState(false);
   const [showGameOverUI, setShowGameOverUI] = useState(false);
+
+  // Pontuação final exibida no painel
+  const [finalScore, setFinalScore] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -92,8 +109,16 @@ export default function Game() {
 
     // Sprites dos números
     const numberSpritesSrc = [
-      number0Src, number1Src, number2Src, number3Src, number4Src,
-      number5Src, number6Src, number7Src, number8Src, number9Src
+      number0Src,
+      number1Src,
+      number2Src,
+      number3Src,
+      number4Src,
+      number5Src,
+      number6Src,
+      number7Src,
+      number8Src,
+      number9Src
     ];
 
     const numberImgs = numberSpritesSrc.map((src) => {
@@ -102,7 +127,12 @@ export default function Game() {
       return img;
     });
 
-    const birdImgs = [new Image(), new Image(), new Image()];
+    // Sprites do pássaro
+    const birdImgs = [
+      new Image(),
+      new Image(),
+      new Image()
+    ];
 
     birdImgs[0].src = birdDownSrc;
     birdImgs[1].src = birdMidSrc;
@@ -155,6 +185,7 @@ export default function Game() {
         if (!currentBirdImg.complete || !currentBirdImg.naturalWidth) return;
 
         ctx.save();
+
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
 
@@ -177,7 +208,10 @@ export default function Game() {
       },
 
       update: function () {
-        if (gameState.current !== gameState.gameOver && frame % 5 === 0) {
+        if (
+          gameState.current !== gameState.gameOver &&
+          frame % 5 === 0
+        ) {
           this.frameIndex = (this.frameIndex + 1) % birdImgs.length;
         }
 
@@ -212,6 +246,7 @@ export default function Game() {
 
             if (!groundHitTriggered) {
               groundHitTriggered = true;
+
               setShowPanel(true);
 
               setTimeout(() => {
@@ -238,6 +273,7 @@ export default function Game() {
 
             if (!groundHitTriggered) {
               groundHitTriggered = true;
+
               setShowPanel(true);
 
               setTimeout(() => {
@@ -277,8 +313,21 @@ export default function Game() {
       render: function () {
         if (!baseImg.complete || !baseImg.naturalWidth) return;
 
-        ctx.drawImage(baseImg, this.x, this.y, this.w, this.h);
-        ctx.drawImage(baseImg, this.x + this.w, this.y, this.w, this.h);
+        ctx.drawImage(
+          baseImg,
+          this.x,
+          this.y,
+          this.w,
+          this.h
+        );
+
+        ctx.drawImage(
+          baseImg,
+          this.x + this.w,
+          this.y,
+          this.w,
+          this.h
+        );
       },
 
       position: function () {
@@ -308,8 +357,16 @@ export default function Game() {
           let topPipeY = p.y;
           let bottomPipeY = p.y + this.h + this.gap;
 
-          ctx.drawImage(pipeImg, p.x, bottomPipeY, this.w, this.h);
+          // Cano inferior
+          ctx.drawImage(
+            pipeImg,
+            p.x,
+            bottomPipeY,
+            this.w,
+            this.h
+          );
 
+          // Cano superior
           ctx.save();
 
           ctx.translate(
@@ -369,10 +426,17 @@ export default function Game() {
             }
           }
 
-          if (p.x + this.w < bird.x - bird.radius && !p.passed) {
+          // Contabilizar canos ultrapassados
+          if (
+            p.x + this.w < bird.x - bird.radius &&
+            !p.passed
+          ) {
             p.passed = true;
 
             score.current++;
+
+            // Atualizar pontuação exibida no painel
+            setFinalScore(score.current);
 
             pointSound.currentTime = 0;
             pointSound.play().catch(err => console.log(err));
@@ -434,7 +498,7 @@ export default function Game() {
       }
     };
 
-    // Pontuação
+    // Pontuação durante o jogo
     const scoreDisplay = {
       render: function () {
         if (
@@ -477,7 +541,9 @@ export default function Game() {
       if (bird.y + bird.h / 2 < ground.y) return;
 
       pipes.pipeGenerator = [];
+
       score.current = 0;
+      setFinalScore(0);
 
       bird.speed = 0;
       bird.y = 180;
@@ -634,16 +700,35 @@ export default function Game() {
         </button>
 
         {/* PAINEL DE GAME OVER */}
-<div
-  className={`absolute left-0 top-1/2 w-full flex justify-center z-30 transition-transform duration-500 ease-out ${
-    showPanel ? '-translate-y-1/2' : '-translate-y-[700px]'
-  }`}
->
-          <img
-            src={panelImgSrc}
-            alt="Painel de Score"
-            className="w-[400px] h-auto block drop-shadow-md"
-          />
+        <div
+          className={`absolute left-0 top-1/2 w-full flex justify-center z-30 transition-transform duration-500 ease-out ${
+            showPanel ? '-translate-y-1/2' : '-translate-y-[700px]'
+          }`}
+        >
+          <div className="relative w-[min(400px,95%)]">
+
+            {/* IMAGEM DO PAINEL */}
+            <img
+              src={panelImgSrc}
+              alt="Painel de Score"
+              className="w-full h-auto block drop-shadow-md"
+            />
+
+            {/* PONTUAÇÃO ABAIXO DE SCORE */}
+            <div className="absolute top-[31%] right-[12%] flex items-center justify-end gap-[0px]">
+
+              {finalScore.toString().split('').map((digit, index) => (
+                <img
+                  key={index}
+                  src={numberSprites[Number(digit)]}
+                  alt={digit}
+                  className="w-[18px] h-[27px] object-contain"
+                />
+              ))}
+
+            </div>
+
+          </div>
         </div>
 
         {/* BOTÕES DE GAME OVER - MESMO ESTILO DA HOME */}
@@ -689,6 +774,7 @@ export default function Game() {
           isFadingIn ? 'opacity-100' : 'opacity-0'
         }`}
       />
+
     </div>
   );
 }
