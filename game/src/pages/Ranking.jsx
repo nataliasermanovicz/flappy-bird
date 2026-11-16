@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 
@@ -9,6 +9,7 @@ import baseImg from '../assets/sprites/base.png';
 import panelRankingImg from '../assets/sprites/panel-ranking.png';
 import rankingImg from '../assets/sprites/ranking.png';
 import playBtnImg from '../assets/sprites/play-game.png';
+import newImg from '../assets/sprites/new.png';
 
 // Som
 import swooshSound from '../assets/sounds/swoosh.ogg';
@@ -19,20 +20,51 @@ export default function Ranking() {
 
   const [isFading, setIsFading] = useState(false);
 
-  // Recuperar pontuações salvas
-  const savedScores = JSON.parse(
-    localStorage.getItem('ranking') || '[]'
-  );
+  // Recuperar e ordenar pontuações
+  const [scores] = useState(() => {
+    try {
+      const savedScores = JSON.parse(
+        localStorage.getItem('ranking') || '[]'
+      );
 
-  // Ordenar pontuações da maior para a menor
-  const scores = [...savedScores].sort(
-    (a, b) => Number(b.score) - Number(a.score)
-  );
+      return [...savedScores].sort(
+        (a, b) => Number(b.score) - Number(a.score)
+      );
 
-  // Calcular recorde
+    } catch (error) {
+      console.error('Erro ao carregar ranking:', error);
+      return [];
+    }
+  });
+
+  // Calcular recorde pessoal
   const bestScore = scores.length > 0
-    ? Math.max(...scores.map(item => Number(item.score) || 0))
+    ? Math.max(
+        ...scores.map(item => Number(item.score) || 0)
+      )
     : 0;
+
+  // Marcar pontuações como visualizadas
+  useEffect(() => {
+    try {
+      const savedScores = JSON.parse(
+        localStorage.getItem('ranking') || '[]'
+      );
+
+      const updatedScores = savedScores.map(item => ({
+        ...item,
+        isNew: false
+      }));
+
+      localStorage.setItem(
+        'ranking',
+        JSON.stringify(updatedScores)
+      );
+
+    } catch (error) {
+      console.error('Erro ao atualizar ranking:', error);
+    }
+  }, []);
 
   // Iniciar jogo
   const handlePlayClick = () => {
@@ -70,7 +102,7 @@ export default function Ranking() {
             animation: scrollGround 2.7s linear infinite;
           }
 
-          /* Personalização da barra de rolagem */
+          /* PERSONALIZAÇÃO DA BARRA DE ROLAGEM */
           .ranking-scroll::-webkit-scrollbar {
             width: 5px;
           }
@@ -148,17 +180,32 @@ export default function Ranking() {
                   scores.map((item, index) => (
 
                     <div
-                      key={index}
+                      key={item.id || index}
                       className="flex justify-between items-center px-2 py-1 border-b border-[#b9a76a]/40"
                     >
 
+                      {/* POSIÇÃO E NOME */}
                       <span className="text-[#70401f] font-bold text-xs sm:text-sm truncate">
-                        {index + 1}　{item.name || 'Jogador'}
+                        {index + 1}　{item.name || 'Você'}
                       </span>
 
-                      <span className="text-[#70401f] font-bold text-xs sm:text-sm ml-2">
-                        {item.score}
-                      </span>
+                      {/* PONTUAÇÃO E NEW */}
+                      <div className="flex items-center justify-end gap-1 shrink-0 ml-2">
+
+                        <span className="text-[#70401f] font-bold text-xs sm:text-sm">
+                          {item.score}
+                        </span>
+
+                        {/* INDICADOR DE NOVA PONTUAÇÃO */}
+                        {item.isNew && (
+                          <img
+                            src={newImg}
+                            alt="Nova pontuação"
+                            className="w-[30px] h-auto object-contain"
+                          />
+                        )}
+
+                      </div>
 
                     </div>
 

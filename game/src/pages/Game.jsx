@@ -65,7 +65,6 @@ export default function Game() {
   const canvasRef = useRef(null);
   const audioInstancesRef = useRef([]);
   const isPausedRef = useRef(false);
-
   const gameMethodsRef = useRef({});
 
   const navigate = useNavigate();
@@ -78,7 +77,6 @@ export default function Game() {
   const [showPanel, setShowPanel] = useState(false);
   const [showGameOverUI, setShowGameOverUI] = useState(false);
 
-  // Pontuação final exibida no painel
   const [finalScore, setFinalScore] = useState(0);
 
   // Selecionar medalha de acordo com a pontuação
@@ -114,6 +112,7 @@ export default function Game() {
 
     let gameOverTriggered = false;
     let groundHitTriggered = false;
+    let scoreSaved = false;
 
     // Carregamento dos sprites
     const bgImg = new Image();
@@ -185,6 +184,36 @@ export default function Game() {
     let frame = 0;
 
     const score = { current: 0 };
+
+    // SALVAR PONTUAÇÃO NO RANKING
+    const saveScore = () => {
+      if (scoreSaved) return;
+
+      scoreSaved = true;
+
+      try {
+        const savedScores = JSON.parse(
+          localStorage.getItem('ranking') || '[]'
+        );
+
+        const newScore = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name: 'Você',
+          score: score.current,
+          isNew: true
+        };
+
+        savedScores.push(newScore);
+
+        localStorage.setItem(
+          'ranking',
+          JSON.stringify(savedScores)
+        );
+
+      } catch (error) {
+        console.error('Erro ao salvar pontuação:', error);
+      }
+    };
 
     const gameState = {
       current: 0,
@@ -274,6 +303,8 @@ export default function Game() {
             if (!groundHitTriggered) {
               groundHitTriggered = true;
 
+              saveScore();
+
               setShowPanel(true);
 
               setTimeout(() => {
@@ -300,6 +331,8 @@ export default function Game() {
 
             if (!groundHitTriggered) {
               groundHitTriggered = true;
+
+              saveScore();
 
               setShowPanel(true);
 
@@ -451,6 +484,8 @@ export default function Game() {
               gameOverTriggered = true;
               setIsGameOver(true);
             }
+
+            saveScore();
           }
 
           // Contabilizar canos ultrapassados
@@ -462,7 +497,6 @@ export default function Game() {
 
             score.current++;
 
-            // Atualizar pontuação exibida no painel
             setFinalScore(score.current);
 
             pointSound.currentTime = 0;
@@ -476,6 +510,8 @@ export default function Game() {
                 gameOverTriggered = true;
                 setIsGameOver(true);
               }
+
+              saveScore();
             }
           }
 
@@ -491,7 +527,6 @@ export default function Game() {
       render: function () {
         if (gameState.current === gameState.getReady) {
 
-          // Imagem GET READY
           if (getReadyImg.complete && getReadyImg.naturalWidth) {
             ctx.drawImage(
               getReadyImg,
@@ -502,7 +537,6 @@ export default function Game() {
             );
           }
 
-          // Imagem MESSAGE - posição fixa
           if (messageImg.complete && messageImg.naturalWidth) {
             ctx.drawImage(
               messageImg,
@@ -591,6 +625,8 @@ export default function Game() {
       pipes.pipeGenerator = [];
 
       score.current = 0;
+      scoreSaved = false;
+
       setFinalScore(0);
 
       bird.speed = 0;
@@ -755,21 +791,20 @@ export default function Game() {
         >
           <div className="relative w-[min(400px,95%)]">
 
-            {/* IMAGEM DO PAINEL */}
             <img
               src={panelImgSrc}
               alt="Painel de Score"
               className="w-full h-auto block drop-shadow-md"
             />
 
-            {/* MEDALHA DE ACORDO COM A PONTUAÇÃO */}
+            {/* MEDALHA */}
             <img
               src={getMedal()}
               alt="Medalha conquistada"
               className="absolute left-[12%] top-[38%] w-[20%] h-auto object-contain"
             />
 
-            {/* PONTUAÇÃO ABAIXO DE SCORE */}
+            {/* PONTUAÇÃO */}
             <div className="absolute top-[31%] right-[12%] flex items-center justify-end gap-0">
 
               {finalScore.toString().split('').map((digit, index) => (
