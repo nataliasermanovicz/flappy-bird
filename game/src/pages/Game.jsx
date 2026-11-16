@@ -634,12 +634,11 @@ export default function Game() {
         </button>
 
         {/* PAINEL DE GAME OVER */}
-        <div
-          className={`absolute left-0 w-full flex justify-center z-30 transition-transform duration-500 ease-out ${
-            showPanel ? 'translate-y-0' : '-translate-y-[700px]'
-          }`}
-          style={{ top: '350px' }}
-        >
+<div
+  className={`absolute left-0 top-1/2 w-full flex justify-center z-30 transition-transform duration-500 ease-out ${
+    showPanel ? '-translate-y-1/2' : '-translate-y-[700px]'
+  }`}
+>
           <img
             src={panelImgSrc}
             alt="Painel de Score"
