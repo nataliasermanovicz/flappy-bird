@@ -6,6 +6,7 @@ import { useAudio } from '../context/AudioContext';
 
 // Sprites do jogo
 import bgDay from '../assets/sprites/background-day.png';
+import bgNight from '../assets/sprites/background-night.png';
 import baseImg from '../assets/sprites/base.png';
 import flappyTitle from '../assets/sprites/flappy-bird.png';
 import birdMid from '../assets/sprites/bird-midflap.png';
@@ -283,19 +284,7 @@ export default function Home() {
           display: flex;
           justify-content: center;
           align-items: center;
-          gap: 12px;
           font-size: 17px;
-        }
-
-        /* TEMA NOTURNO */
-
-        .night-overlay {
-          position: absolute;
-          inset: 0;
-          z-index: 5;
-          pointer-events: none;
-          background: rgba(7, 15, 65, 0.62);
-          mix-blend-mode: multiply;
         }
 
         @media (max-height: 600px) {
@@ -324,18 +313,12 @@ export default function Home() {
           width: 'min(100vw, 60dvh)',
           height: 'min(100dvh, 166.6667vw)',
           aspectRatio: '3 / 5',
-          backgroundImage: `url(${bgDay})`,
+          backgroundImage: `url(${theme === 'noite' ? bgNight : bgDay})`,
           backgroundSize: '100% 100%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}
       >
-
-        {/* EFEITO DO TEMA NOTURNO */}
-
-        {theme === 'noite' && (
-          <div className="night-overlay" />
-        )}
 
         {/* BOTÕES SUPERIORES */}
 
@@ -494,7 +477,7 @@ export default function Home() {
               {/* CABEÇALHO */}
 
               <div className="settings-header">
-                ✦ MENU ✦
+                MENU
               </div>
 
               {/* TEMA */}
@@ -516,7 +499,6 @@ export default function Home() {
                     theme === 'dia' ? 'selected' : ''
                   }`}
                 >
-                  <span className="text-xl mr-2">☀</span>
                   Dia
                 </button>
 
@@ -529,7 +511,6 @@ export default function Home() {
                     theme === 'noite' ? 'selected' : ''
                   }`}
                 >
-                  <span className="text-xl mr-2">☾</span>
                   Noite
                 </button>
 
@@ -576,10 +557,6 @@ export default function Home() {
                 onClick={handleCloseMenu}
                 className="settings-button settings-back"
               >
-                <span className="text-2xl text-[#ed573b]">
-                  ◀
-                </span>
-
                 Voltar
               </button>
 
