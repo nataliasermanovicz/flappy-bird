@@ -350,7 +350,10 @@ export default function Home() {
             {/* SOM */}
 
             <button
-              onClick={toggleMute}
+              onClick={() => {
+                playSound();
+                toggleMute();
+              }}
               className="w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
               aria-label={isMuted ? 'Ativar som' : 'Desativar som'}
             >
@@ -434,6 +437,7 @@ export default function Home() {
 
             <Link
               to="/ranking"
+              onClick={playSound}
               className="w-[125px] sm:w-[135px] hover:scale-105 active:scale-95 transition-transform outline-none flex justify-center"
             >
               <img
@@ -483,9 +487,11 @@ export default function Home() {
               {/* TEMA */}
 
               <div className="settings-divider">
+
                 <h2 className="settings-label mb-0">
                   Tema:
                 </h2>
+
               </div>
 
               <div className="grid grid-cols-2 gap-3">
