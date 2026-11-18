@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAudio } from '../context/AudioContext';
 
 // Sprites do jogo
-import bgImgSrc from '../assets/sprites/background-day.png';
+import bgDayImgSrc from '../assets/sprites/background-day.png';
+import bgNightImgSrc from '../assets/sprites/background-night.png';
 import baseImgSrc from '../assets/sprites/base.png';
 import pipeImgSrc from '../assets/sprites/pipe.png';
 import birdMidSrc from '../assets/sprites/bird-midflap.png';
@@ -61,6 +62,37 @@ import pointSoundSrc from '../assets/sounds/point.ogg';
 import hitSoundSrc from '../assets/sounds/hit.ogg';
 import dieSoundSrc from '../assets/sounds/die.ogg';
 
+// CONFIGURAÇÕES DE DIFICULDADE
+// Mantidas fora do componente para evitar recriação do objeto
+const difficultySettings = {
+  facil: {
+    gravity: 0.22,
+    jump: 4.4,
+    pipeGap: 125,
+    pipeSpeed: 1.6,
+    groundSpeed: 1.6,
+    spawnInterval: 110
+  },
+
+  medio: {
+    gravity: 0.25,
+    jump: 4.6,
+    pipeGap: 100,
+    pipeSpeed: 2,
+    groundSpeed: 2,
+    spawnInterval: 100
+  },
+
+  dificil: {
+    gravity: 0.29,
+    jump: 4.9,
+    pipeGap: 80,
+    pipeSpeed: 2.6,
+    groundSpeed: 2.6,
+    spawnInterval: 85
+  }
+};
+
 export default function Game() {
   const canvasRef = useRef(null);
   const audioInstancesRef = useRef([]);
@@ -79,6 +111,15 @@ export default function Game() {
 
   const [finalScore, setFinalScore] = useState(0);
 
+  // Recuperar configurações selecionadas no Home.jsx
+  const selectedTheme = localStorage.getItem('flappyTheme') || 'dia';
+
+  const selectedDifficulty =
+    localStorage.getItem('flappyDifficulty') || 'medio';
+
+  const currentDifficulty =
+    difficultySettings[selectedDifficulty] || difficultySettings.medio;
+
   // Selecionar medalha de acordo com a pontuação
   const getMedal = () => {
     if (finalScore >= 100) {
@@ -96,6 +137,7 @@ export default function Game() {
     return bronzeMedal;
   };
 
+  // Transição de entrada
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsFadingIn(false);
@@ -104,8 +146,12 @@ export default function Game() {
     return () => clearTimeout(timer);
   }, []);
 
+  // NÚCLEO DO JOGO
   useEffect(() => {
     const cvs = canvasRef.current;
+
+    if (!cvs) return;
+
     const ctx = cvs.getContext('2d');
 
     let animationFrameId;
@@ -114,10 +160,14 @@ export default function Game() {
     let groundHitTriggered = false;
     let scoreSaved = false;
 
-    // Carregamento dos sprites
+    // Carregamento do background conforme o tema
     const bgImg = new Image();
-    bgImg.src = bgImgSrc;
 
+    bgImg.src = selectedTheme === 'noite'
+      ? bgNightImgSrc
+      : bgDayImgSrc;
+
+    // Carregamento dos sprites
     const baseImg = new Image();
     baseImg.src = baseImgSrc;
 
@@ -222,7 +272,7 @@ export default function Game() {
       gameOver: 2
     };
 
-    // Pássaro
+    // PÁSSARO
     const bird = {
       x: 60,
       y: 180,
@@ -231,8 +281,8 @@ export default function Game() {
       radius: 12,
       frameIndex: 0,
       speed: 0,
-      gravity: 0.25,
-      jump: 4.6,
+      gravity: currentDifficulty.gravity,
+      jump: currentDifficulty.jump,
       rotation: 0,
 
       render: function () {
@@ -345,7 +395,7 @@ export default function Game() {
       }
     };
 
-    // Fundo
+    // FUNDO
     const bg = {
       render: function () {
         if (bgImg.complete && bgImg.naturalWidth) {
@@ -354,11 +404,11 @@ export default function Game() {
       }
     };
 
-    // Chão
+    // CHÃO
     const ground = {
       x: 0,
       w: cvs.width,
-      dx: 2,
+      dx: currentDifficulty.groundSpeed,
 
       get h() {
         return !baseImg.naturalWidth
@@ -400,12 +450,12 @@ export default function Game() {
       }
     };
 
-    // Canos
+    // CANOS
     const pipes = {
       w: 52,
       h: 320,
-      gap: 100,
-      dx: 2,
+      gap: currentDifficulty.pipeGap,
+      dx: currentDifficulty.pipeSpeed,
       pipeGenerator: [],
 
       render: function () {
@@ -451,7 +501,8 @@ export default function Game() {
       position: function () {
         if (gameState.current !== gameState.play) return;
 
-        if (frame % 100 === 0) {
+        // Gerar novos canos
+        if (frame % currentDifficulty.spawnInterval === 0) {
           this.pipeGenerator.push({
             x: cvs.width,
             y: Math.floor(Math.random() * (-100 - -260 + 1)) + -260
@@ -463,7 +514,7 @@ export default function Game() {
 
           p.x -= this.dx;
 
-          // Colisão com os canos
+          // COLISÃO COM OS CANOS
           if (
             bird.x + bird.radius > p.x &&
             bird.x - bird.radius < p.x + this.w &&
@@ -488,7 +539,7 @@ export default function Game() {
             saveScore();
           }
 
-          // Contabilizar canos ultrapassados
+          // CONTABILIZAR CANOS ULTRAPASSADOS
           if (
             p.x + this.w < bird.x - bird.radius &&
             !p.passed
@@ -517,12 +568,13 @@ export default function Game() {
 
           if (p.x < -this.w) {
             this.pipeGenerator.shift();
+            i--;
           }
         }
       }
     };
 
-    // Tela Get Ready
+    // TELA GET READY
     const getReadyScreen = {
       render: function () {
         if (gameState.current === gameState.getReady) {
@@ -550,7 +602,7 @@ export default function Game() {
       }
     };
 
-    // Tela Game Over
+    // TELA GAME OVER
     const gameOverScreen = {
       alpha: 0,
       y: 120,
@@ -580,7 +632,7 @@ export default function Game() {
       }
     };
 
-    // Pontuação durante o jogo
+    // PONTUAÇÃO DURANTE O JOGO
     const scoreDisplay = {
       render: function () {
         if (
@@ -618,7 +670,7 @@ export default function Game() {
       }
     };
 
-    // Reset do jogo
+    // RESET DO JOGO
     const resetGame = () => {
       if (bird.y + bird.h / 2 < ground.y) return;
 
@@ -632,6 +684,7 @@ export default function Game() {
       bird.speed = 0;
       bird.y = 180;
       bird.rotation = 0;
+      bird.frameIndex = 0;
 
       gameState.current = gameState.getReady;
 
@@ -651,7 +704,7 @@ export default function Game() {
       bird.y + bird.h / 2 >= ground.y
     );
 
-    // Loop do jogo
+    // LOOP DO JOGO
     function loop() {
       if (!isPausedRef.current) {
         bird.update();
@@ -675,7 +728,7 @@ export default function Game() {
       animationFrameId = requestAnimationFrame(loop);
     }
 
-    // Clique no canvas
+    // CLIQUE NO CANVAS
     const handleCanvasClick = () => {
       if (isPausedRef.current) return;
 
@@ -688,7 +741,7 @@ export default function Game() {
       }
     };
 
-    // Tecla espaço
+    // TECLA ESPAÇO
     const handleKeyDown = (event) => {
       if (event.code === 'Space') {
         event.preventDefault();
@@ -726,16 +779,17 @@ export default function Game() {
 
       audioInstancesRef.current = [];
     };
-  }, [navigate]);
+  }, [navigate, currentDifficulty, selectedTheme]);
 
-  // Atualização do áudio
+  // ATUALIZAÇÃO DO ÁUDIO
+  // Alterar o volume não reinicia o núcleo do jogo
   useEffect(() => {
     audioInstancesRef.current.forEach(audio => {
       audio.muted = isMuted;
     });
   }, [isMuted]);
 
-  // Pausar e retomar
+  // PAUSAR E RETOMAR
   const handlePause = () => {
     const nextPausedState = !isPausedRef.current;
 
