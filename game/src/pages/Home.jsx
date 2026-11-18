@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAudio } from '../context/AudioContext';
 
-// Importações dos sprites
+// Sprites do jogo
 import bgDay from '../assets/sprites/background-day.png';
 import baseImg from '../assets/sprites/base.png';
 import flappyTitle from '../assets/sprites/flappy-bird.png';
@@ -14,7 +14,7 @@ import birdDown from '../assets/sprites/bird-downflap.png';
 import playBtnImg from '../assets/sprites/play-game.png';
 import rankBtnImg from '../assets/sprites/rank.png';
 
-// Ícones do topo
+// Ícones
 import menuBtnImg from '../assets/sprites/icons/menu.png';
 import soundBtnImg from '../assets/sprites/icons/sound.png';
 import muteBtnImg from '../assets/sprites/icons/mute.png';
@@ -23,23 +23,40 @@ import helpBtnImg from '../assets/sprites/icons/help.png';
 // Instruções
 import instrucoesImg from '../assets/sprites/instrucoes.png';
 
-// Importação do som
+// Som
 import swooshSound from '../assets/sounds/swoosh.ogg';
 
 export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [birdFrame, setBirdFrame] = useState(0);
   const [isFading, setIsFading] = useState(false);
 
-  const navigate = useNavigate();
+  // Configurações salvas
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('flappyTheme') || 'dia'
+  );
 
-  // Controle global do áudio
+  const [difficulty, setDifficulty] = useState(
+    () => localStorage.getItem('flappyDifficulty') || 'medio'
+  );
+
+  const navigate = useNavigate();
   const { isMuted, toggleMute } = useAudio();
 
-  // Frames de animação do passarinho
   const birdFrames = [birdUp, birdMid, birdDown];
 
-  // Animação contínua das asas
+  // Salvar tema
+  useEffect(() => {
+    localStorage.setItem('flappyTheme', theme);
+  }, [theme]);
+
+  // Salvar dificuldade
+  useEffect(() => {
+    localStorage.setItem('flappyDifficulty', difficulty);
+  }, [difficulty]);
+
+  // Animação do passarinho
   useEffect(() => {
     const interval = setInterval(() => {
       setBirdFrame((previous) => (previous + 1) % birdFrames.length);
@@ -48,7 +65,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fechar instruções automaticamente após 6 segundos
+  // Fechar instruções automaticamente
   useEffect(() => {
     let timer;
 
@@ -61,13 +78,30 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [showHelp]);
 
-  // Exibir instruções
-  const handleShowHelp = () => {
+  // Som dos botões
+  const playSound = () => {
     if (!isMuted) {
       const audio = new Audio(swooshSound);
-      audio.play();
+      audio.play().catch(() => {});
     }
+  };
 
+  // Abrir menu
+  const handleMenuClick = () => {
+    playSound();
+    setShowMenu(true);
+    setShowHelp(false);
+  };
+
+  // Fechar menu
+  const handleCloseMenu = () => {
+    playSound();
+    setShowMenu(false);
+  };
+
+  // Ajuda
+  const handleShowHelp = () => {
+    playSound();
     setShowHelp(true);
   };
 
@@ -75,19 +109,11 @@ export default function Home() {
   const handlePlayClick = (e) => {
     e.preventDefault();
 
-    // Evita múltiplos cliques se a transição já começou
     if (isFading) return;
 
-    // Reproduzir som apenas se o áudio estiver ativado
-    if (!isMuted) {
-      const audio = new Audio(swooshSound);
-      audio.play();
-    }
-
-    // Ativa o escurecimento da tela
+    playSound();
     setIsFading(true);
 
-    // Aguarda 500ms e muda de página
     setTimeout(() => {
       navigate('/game');
     }, 500);
@@ -96,30 +122,202 @@ export default function Home() {
   return (
     <div className="flex justify-center items-center w-screen h-dvh bg-black overflow-hidden select-none">
 
-      {/* ESTILOS CSS PARA AS ANIMAÇÕES DA HOME */}
-      <style>
-        {`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-12px); }
+      <style>{`
+
+        /* ANIMAÇÕES */
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+
+        .animate-float {
+          animation: float 0.8s ease-in-out infinite;
+        }
+
+        @keyframes scrollGround {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+
+        .animate-scroll {
+          animation: scrollGround 2.7s linear infinite;
+        }
+
+        @keyframes menuAppear {
+          from {
+            opacity: 0;
+            transform: scale(0.8) translateY(15px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        .menu-appear {
+          animation: menuAppear 0.2s steps(5) forwards;
+        }
+
+        /* FUNDO DO MENU */
+
+        .settings-overlay {
+          position: absolute;
+          inset: 0;
+          z-index: 40;
+          background: rgba(0, 0, 0, 0.65);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+
+        /* PAINEL */
+
+        .settings-panel {
+          position: relative;
+          width: 100%;
+          max-width: 370px;
+          background: #fff0b8;
+          border: 5px solid #593324;
+          border-radius: 9px;
+          padding: 48px 18px 22px;
+          box-shadow:
+            0 8px 0 #352018,
+            inset 0 0 0 4px #f8d88d,
+            inset 0 0 0 7px #d89c54;
+        }
+
+        /* CABEÇALHO */
+
+        .settings-header {
+          position: absolute;
+          top: -24px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 72%;
+          padding: 11px 8px;
+          background: #f28b32;
+          border: 4px solid #4c281d;
+          border-radius: 7px;
+          box-shadow: 0 5px 0 #68351f;
+          color: white;
+          text-align: center;
+          font-family: monospace;
+          font-size: 22px;
+          font-weight: 1000;
+          text-shadow: 3px 3px #64301d;
+          letter-spacing: 2px;
+        }
+
+        /* TÍTULOS */
+
+        .settings-label {
+          color: #482b20;
+          font-family: monospace;
+          font-weight: 1000;
+          font-size: clamp(15px, 4vw, 19px);
+          text-align: center;
+          margin-bottom: 13px;
+          text-shadow: 1px 1px #e0b875;
+        }
+
+        /* BOTÕES */
+
+        .settings-button {
+          background: #fffafa;
+          border: 3px solid #51332e;
+          border-radius: 7px;
+          color: #493026;
+          font-family: monospace;
+          font-weight: 1000;
+          box-shadow: 0 5px 0 #a18a83;
+          cursor: pointer;
+          transition: transform 0.1s, background 0.1s;
+        }
+
+        .settings-button:hover {
+          filter: brightness(1.08);
+        }
+
+        .settings-button:active {
+          transform: translateY(4px);
+          box-shadow: 0 1px 0 #a18a83;
+        }
+
+        /* BOTÃO SELECIONADO */
+
+        .settings-button.selected {
+          background: #18a9ec;
+          color: white;
+          border-color: #33251f;
+          box-shadow:
+            0 5px 0 #125b91,
+            inset 0 0 0 3px #63d7ff;
+          text-shadow: 2px 2px #24517b;
+        }
+
+        /* SEPARADORES */
+
+        .settings-divider {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 20px 0 13px;
+        }
+
+        .settings-divider::before,
+        .settings-divider::after {
+          content: '';
+          flex: 1;
+          height: 5px;
+          background: #dca95f;
+        }
+
+        /* BOTÃO VOLTAR */
+
+        .settings-back {
+          width: 75%;
+          height: 55px;
+          margin: 25px auto 0;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 12px;
+          font-size: 17px;
+        }
+
+        /* TEMA NOTURNO */
+
+        .night-overlay {
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          pointer-events: none;
+          background: rgba(7, 15, 65, 0.62);
+          mix-blend-mode: multiply;
+        }
+
+        @media (max-height: 600px) {
+          .settings-panel {
+            transform: scale(0.82);
+            padding-top: 40px;
+            padding-bottom: 15px;
           }
 
-          .animate-float {
-            animation: float 0.8s ease-in-out infinite;
+          .settings-divider {
+            margin-top: 12px;
           }
 
-          @keyframes scrollGround {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-50%); }
+          .settings-back {
+            margin-top: 17px;
           }
+        }
 
-          .animate-scroll {
-            animation: scrollGround 2.7s linear infinite;
-          }
-        `}
-      </style>
+      `}</style>
 
-      {/* CONTAINER PRINCIPAL DO JOGO */}
+      {/* CONTAINER PRINCIPAL */}
+
       <div
         className="relative flex flex-col overflow-hidden shadow-2xl box-border"
         style={{
@@ -133,9 +331,16 @@ export default function Home() {
         }}
       >
 
+        {/* EFEITO DO TEMA NOTURNO */}
+
+        {theme === 'noite' && (
+          <div className="night-overlay" />
+        )}
+
         {/* BOTÕES SUPERIORES */}
+
         <div
-          className="w-full pt-12 flex justify-between items-center z-30 shrink-0 box-border"
+          className="w-full flex justify-between items-center z-30 shrink-0 box-border"
           style={{
             paddingLeft: '6px',
             paddingRight: '6px',
@@ -143,12 +348,14 @@ export default function Home() {
           }}
         >
 
-          {/* MENU E SOM */}
           <div className="flex gap-4 items-center">
 
+            {/* MENU */}
+
             <button
+              onClick={handleMenuClick}
               className="w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
-              aria-label="Menu"
+              aria-label="Abrir menu"
             >
               <img
                 src={menuBtnImg}
@@ -157,15 +364,16 @@ export default function Home() {
               />
             </button>
 
-            {/* BOTÃO DE SOM */}
+            {/* SOM */}
+
             <button
               onClick={toggleMute}
               className="w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0"
-              aria-label={isMuted ? "Ativar som" : "Desativar som"}
+              aria-label={isMuted ? 'Ativar som' : 'Desativar som'}
             >
               <img
                 src={isMuted ? muteBtnImg : soundBtnImg}
-                alt={isMuted ? "Som desligado" : "Som ligado"}
+                alt="Som"
                 className="w-full h-full object-contain"
               />
             </button>
@@ -173,13 +381,13 @@ export default function Home() {
           </div>
 
           {/* AJUDA */}
+
           <div className="relative flex justify-end items-center z-40 w-12 h-12">
 
-            {/* BOTÃO DE AJUDA */}
             <button
               onClick={handleShowHelp}
               className={`w-12 h-12 hover:scale-110 active:scale-90 transition-transform bg-transparent border-none cursor-pointer p-0 shrink-0 ${
-                showHelp ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                showHelp ? 'opacity-0 pointer-events-none' : ''
               }`}
               aria-label="Ajuda"
             >
@@ -190,7 +398,6 @@ export default function Home() {
               />
             </button>
 
-            {/* IMAGEM DE INSTRUÇÕES */}
             <img
               src={instrucoesImg}
               alt="Instruções"
@@ -205,10 +412,13 @@ export default function Home() {
         </div>
 
         {/* ÁREA CENTRAL */}
+
         <div className="flex-1 min-h-0 flex flex-col items-center relative z-10 w-full">
 
           {/* TÍTULO E PASSARINHO */}
+
           <div className="absolute top-[35%] flex items-center justify-center gap-4 w-full px-3 animate-float">
+
             <img
               src={flappyTitle}
               alt="Flappy Bird"
@@ -220,9 +430,11 @@ export default function Home() {
               alt="Bird"
               className="w-12 sm:w-14 h-auto"
             />
+
           </div>
 
-          {/* BOTÕES PLAY E RANKING PRÓXIMOS AO CHÃO */}
+          {/* BOTÕES PLAY E RANKING */}
+
           <div className="absolute bottom-[3%] flex gap-5 w-full justify-center px-4">
 
             <Link
@@ -249,22 +461,141 @@ export default function Home() {
             </Link>
 
           </div>
+
         </div>
 
-        {/* CHÃO CORRENDO */}
+        {/* CHÃO */}
+
         <div className="w-full shrink-0 z-10 overflow-hidden">
+
           <div className="flex w-[200%] animate-scroll">
+
             <img src={baseImg} alt="" className="block w-1/2 h-auto" />
             <img src={baseImg} alt="" className="block w-1/2 h-auto" />
+
           </div>
+
         </div>
 
-        {/* CAMADA DE TRANSIÇÃO (OVERLAY ESCURO) */}
+        {/* MENU DE CONFIGURAÇÕES */}
+
+        {showMenu && (
+
+          <div
+            className="settings-overlay"
+            onClick={handleCloseMenu}
+          >
+
+            <div
+              className="settings-panel menu-appear"
+              onClick={(e) => e.stopPropagation()}
+            >
+
+              {/* CABEÇALHO */}
+
+              <div className="settings-header">
+                ✦ MENU ✦
+              </div>
+
+              {/* TEMA */}
+
+              <div className="settings-divider">
+                <h2 className="settings-label mb-0">
+                  Tema:
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+
+                <button
+                  onClick={() => {
+                    playSound();
+                    setTheme('dia');
+                  }}
+                  className={`settings-button h-[65px] text-[16px] ${
+                    theme === 'dia' ? 'selected' : ''
+                  }`}
+                >
+                  <span className="text-xl mr-2">☀</span>
+                  Dia
+                </button>
+
+                <button
+                  onClick={() => {
+                    playSound();
+                    setTheme('noite');
+                  }}
+                  className={`settings-button h-[65px] text-[16px] ${
+                    theme === 'noite' ? 'selected' : ''
+                  }`}
+                >
+                  <span className="text-xl mr-2">☾</span>
+                  Noite
+                </button>
+
+              </div>
+
+              {/* DIFICULDADE */}
+
+              <div className="settings-divider">
+
+                <h2 className="settings-label mb-0">
+                  Dificuldade:
+                </h2>
+
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+
+                {[
+                  { id: 'facil', label: 'Fácil' },
+                  { id: 'medio', label: 'Médio' },
+                  { id: 'dificil', label: 'Difícil' }
+                ].map((option) => (
+
+                  <button
+                    key={option.id}
+                    onClick={() => {
+                      playSound();
+                      setDifficulty(option.id);
+                    }}
+                    className={`settings-button h-[62px] text-[13px] ${
+                      difficulty === option.id ? 'selected' : ''
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+
+                ))}
+
+              </div>
+
+              {/* VOLTAR */}
+
+              <button
+                onClick={handleCloseMenu}
+                className="settings-button settings-back"
+              >
+                <span className="text-2xl text-[#ed573b]">
+                  ◀
+                </span>
+
+                Voltar
+              </button>
+
+            </div>
+
+          </div>
+
+        )}
+
+        {/* TRANSIÇÃO */}
+
         <div
           className={`absolute inset-0 bg-black z-50 pointer-events-none transition-opacity duration-500 ${
             isFading ? 'opacity-100' : 'opacity-0'
           }`}
-        ></div>
+        />
 
       </div>
     </div>
