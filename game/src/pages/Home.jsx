@@ -30,6 +30,7 @@ import swooshSound from '../assets/sounds/swoosh.ogg';
 export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [closingMenu, setClosingMenu] = useState(false);
   const [birdFrame, setBirdFrame] = useState(0);
   const [isFading, setIsFading] = useState(false);
 
@@ -89,15 +90,25 @@ export default function Home() {
 
   // Abrir menu
   const handleMenuClick = () => {
+    if (showMenu) return;
+
     playSound();
+    setClosingMenu(false);
     setShowMenu(true);
     setShowHelp(false);
   };
 
-  // Fechar menu
+  // Fechar menu com animação
   const handleCloseMenu = () => {
+    if (closingMenu) return;
+
     playSound();
-    setShowMenu(false);
+    setClosingMenu(true);
+
+    setTimeout(() => {
+      setShowMenu(false);
+      setClosingMenu(false);
+    }, 200);
   };
 
   // Ajuda
@@ -145,11 +156,14 @@ export default function Home() {
           animation: scrollGround 2.7s linear infinite;
         }
 
+        /* ANIMAÇÃO DE ABERTURA DO MENU */
+
         @keyframes menuAppear {
           from {
             opacity: 0;
             transform: scale(0.8) translateY(15px);
           }
+
           to {
             opacity: 1;
             transform: scale(1) translateY(0);
@@ -158,6 +172,25 @@ export default function Home() {
 
         .menu-appear {
           animation: menuAppear 0.2s steps(5) forwards;
+        }
+
+        /* ANIMAÇÃO DE FECHAMENTO DO MENU */
+
+        @keyframes menuDisappear {
+          from {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+
+          to {
+            opacity: 0;
+            transform: scale(0.8) translateY(-15px);
+          }
+        }
+
+        .menu-disappear {
+          animation: menuDisappear 0.2s steps(5) forwards;
+          pointer-events: none;
         }
 
         /* FUNDO DO MENU */
@@ -237,13 +270,17 @@ export default function Home() {
           transition: transform 0.1s, background 0.1s;
         }
 
-        .settings-button:hover {
+        .settings-button:hover:not(:disabled) {
           filter: brightness(1.08);
         }
 
-        .settings-button:active {
+        .settings-button:active:not(:disabled) {
           transform: translateY(4px);
           box-shadow: 0 1px 0 #a18a83;
+        }
+
+        .settings-button:disabled {
+          cursor: default;
         }
 
         /* BOTÃO SELECIONADO */
@@ -289,7 +326,6 @@ export default function Home() {
 
         @media (max-height: 600px) {
           .settings-panel {
-            transform: scale(0.82);
             padding-top: 40px;
             padding-bottom: 15px;
           }
@@ -467,14 +503,17 @@ export default function Home() {
         {/* MENU DE CONFIGURAÇÕES */}
 
         {showMenu && (
-
           <div
             className="settings-overlay"
-            onClick={handleCloseMenu}
+            onClick={() => {
+              if (!closingMenu) handleCloseMenu();
+            }}
           >
 
             <div
-              className="settings-panel menu-appear"
+              className={`settings-panel ${
+                closingMenu ? 'menu-disappear' : 'menu-appear'
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
 
@@ -561,6 +600,7 @@ export default function Home() {
 
               <button
                 onClick={handleCloseMenu}
+                disabled={closingMenu}
                 className="settings-button settings-back"
               >
                 Voltar
@@ -569,7 +609,6 @@ export default function Home() {
             </div>
 
           </div>
-
         )}
 
         {/* TRANSIÇÃO */}
